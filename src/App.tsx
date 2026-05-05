@@ -1,16 +1,48 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import LoginView from './views/auth/LoginView';
 import RegisterView from './views/auth/RegisterView';
+import ConfirmAccountView from './views/auth/ConfirmAccountView';
+import RequestNewTokenView from './views/auth/RequestNewTokenView';
+import ForgotPasswordView from './views/auth/ForgotPasswordView';
+import ResetPasswordTokenView from './views/auth/ResetPasswordTokenView';
+import NewPasswordView from './views/auth/NewPasswordView';
+import HomeView from './views/HomeView';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginView />} />
-        <Route path="/register" element={<RegisterView />} />
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomeView />} />
+          <Route path="/auth/login" element={<LoginView />} />
+          <Route path="/auth/register" element={<RegisterView />} />
+          <Route path="/auth/confirm" element={<ConfirmAccountView />} />
+          <Route path="/auth/resend-token" element={<RequestNewTokenView />} />
+          <Route path="/auth/forgot-password" element={<ForgotPasswordView />} />
+          <Route path="/auth/reset-password" element={<ResetPasswordTokenView />} />
+          <Route path="/auth/new-password" element={<NewPasswordView />} />
+        </Routes>
+
+
+        <ToastContainer 
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 
