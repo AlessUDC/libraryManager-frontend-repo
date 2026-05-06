@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react';
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { getUserProfile } from '../api/auth';
-import MenuIcon from '../assets/svg/Menu'
 import UserProfileModal from '../components/UserProfileModal';
 import Sidebar from '../components/Sidebar';
 import ChangeCredentialsModal from '../components/ChangeCredentialsModal';
+import MenuIcon from '../assets/svg/Menu'
+import UserIcon from '../assets/svg/User'
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -15,10 +15,37 @@ type DashboardLayoutProps = {
 
 export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isCredentialsOpen, setIsCredentialsOpen] = useState(false);
+
+  const isProfileOpen = searchParams.get('view-profile') === 'true';
+  const isCredentialsOpen = searchParams.get('edit-profile') === 'true';
+
+  const setIsProfileOpen = (open: boolean | ((prev: boolean) => boolean)) => {
+    const value = typeof open === 'function' ? open(isProfileOpen) : open;
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set('view-profile', 'true');
+      params.delete('edit-profile');
+    } else {
+      params.delete('view-profile');
+    }
+    setSearchParams(params);
+  };
+
+  const setIsCredentialsOpen = (open: boolean | ((prev: boolean) => boolean)) => {
+    const value = typeof open === 'function' ? open(isCredentialsOpen) : open;
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set('edit-profile', 'true');
+      params.delete('view-profile');
+    } else {
+      params.delete('edit-profile');
+    }
+    setSearchParams(params);
+  };
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile'],
@@ -104,7 +131,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                 <p className="text-[10px] text-slate-500 uppercase tracking-tighter mt-1">{role}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold border border-slate-700 shadow-lg transform group-hover:scale-105 transition-all">
-                USER ICON
+                <UserIcon className='w-6 h-6' />
               </div>
             </div>
           </div>

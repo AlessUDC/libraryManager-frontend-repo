@@ -111,3 +111,15 @@ export const updateProfile = async (data: any) => {
     throw new Error('No se pudo conectar con el servidor');
   }
 };
+
+export const deleteAccount = async (password: string) => {
+  try {
+    const response = await api.delete('/auth/profile', { data: { password } });
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Error al eliminar la cuenta');
+    }
+    throw new Error('No se pudo conectar con el servidor');
+  }
+};

@@ -1,10 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import HomeIcon from '../assets/svg/SidebarHomeIcon';
 import BookIcon from '../assets/svg/SidebarBook';
 import ClipboardIcon from '../assets/svg/SidebarClipboard';
 import LogoutIcon from '../assets/svg/Logout';
 import ChevronRightIcon from '../assets/svg/ChevronRight';
 import ChevronLeftIcon from '../assets/svg/ChevronLeft';
+import { UserGroupIcon, TagIcon } from '@heroicons/react/24/outline';
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -21,11 +23,16 @@ export default function Sidebar({
   role,
   handleLogout
 }: SidebarProps) {
+  const location = useLocation();
+
   const menuItems = [
-    { name: 'Inicio', icon: HomeIcon, path: '#' },
-    { name: 'Catálogo', icon: BookIcon, path: '#' },
+    { name: 'Inicio', icon: HomeIcon, path: '/' },
+    { name: 'Catálogo', icon: BookIcon, path: '/dashboard/catalogue' },
+    { name: 'Autores', icon: UserGroupIcon, path: '/dashboard/authors' },
+    { name: 'Categorías', icon: TagIcon, path: '/dashboard/categories' },
     { name: 'Mis Préstamos', icon: ClipboardIcon, path: '#' },
   ];
+
 
   return (
     <aside className={`
@@ -62,30 +69,34 @@ export default function Sidebar({
       
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {menuItems.map((item) => (
-          <a 
-            key={item.name}
-            href={item.path} 
-            className={`
-              flex items-center p-3 rounded-xl font-medium transition-all duration-200 group
-              ${item.name === 'Inicio' 
-                ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' 
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
-              }
-              ${isCollapsed ? 'justify-center' : ''}
-            `}
-          >
-            <item.icon className={`${isCollapsed ? 'w-6 h-6' : 'w-5 h-5 mr-3'} transition-all`} />
-            {!isCollapsed && <span>{item.name}</span>}
-            
-            {/* Tooltip for collapsed state */}
-            {isCollapsed && (
-              <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-slate-700 shadow-xl">
-                {item.name}
-              </div>
-            )}
-          </a>
-        ))}
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link 
+              key={item.name}
+              to={item.path} 
+              className={`
+                flex items-center p-3 rounded-xl font-medium transition-all duration-200 group
+                ${isActive
+                  ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' 
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'
+                }
+                ${isCollapsed ? 'justify-center' : ''}
+              `}
+            >
+              <item.icon className={`${isCollapsed ? 'w-6 h-6' : 'w-5 h-5 mr-3'} transition-all`} />
+              {!isCollapsed && <span>{item.name}</span>}
+              
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-slate-700 shadow-xl">
+                  {item.name}
+                </div>
+              )}
+            </Link>
+          );
+        })}
+
       </nav>
 
       {/* Footer / Logout */}
