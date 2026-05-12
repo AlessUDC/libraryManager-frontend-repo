@@ -1,42 +1,70 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getBookById, getCopiesByBook, deleteCopy } from '../../api/books';
+import { getBookById, getCopiesByBook, deleteCopy, deleteMultipleCopies } from '../../api/books';
 import { BookOpenIcon, PlusIcon, TrashIcon, MapPinIcon, ArrowLeftIcon, PencilSquareIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import LibraryTable from '../../components/library/LibraryTable';
 import ConfirmModal from '../../components/ConfirmModal';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import type { Copy, CopyStatus, CopyCondition } from '../../types/library';
 import CopyModal from '../../components/library/CopyModal';
+import Pagination from '../../components/Pagination';
+import BulkActionsBar from '../../components/library/BulkActionsBar';
 
 export default function BookCopiesView() {
-  const { bookId } = useParams<{ bookId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCopy, setEditingCopy] = useState<Copy | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: book, isLoading: isLoadingBook } = useQuery({
-    queryKey: ['book', bookId],
-    queryFn: () => getBookById(bookId!),
-    enabled: !!bookId
+    queryKey: ['book', slug],
+    queryFn: () => getBookById(slug!),
+    enabled: !!slug
   });
 
-  const { data: copies, isLoading: isLoadingCopies } = useQuery({
-    queryKey: ['copies', bookId],
-    queryFn: () => getCopiesByBook(bookId!),
-    enabled: !!bookId
+  const { data: copies = [], isLoading: isLoadingCopies } = useQuery({
+    queryKey: ['copies', slug],
+    queryFn: () => getCopiesByBook(slug!),
+    enabled: !!slug
   });
+
+  // Calculate Paginated Data
+  const totalPages = Math.ceil(copies.length / itemsPerPage);
+  const paginatedCopies = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return copies.slice(start, start + itemsPerPage);
+  }, [copies, currentPage]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteCopy,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['copies', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['copies', slug] });
       queryClient.invalidateQueries({ queryKey: ['books'] });
       toast.success('Ejemplar eliminado');
       setIsConfirmOpen(false);
+      setSelectedIds([]);
+    },
+    onError: (error: Error) => toast.error(error.message)
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: deleteMultipleCopies,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['copies', slug] });
+      queryClient.invalidateQueries({ queryKey: ['books'] });
+      toast.success(`${selectedIds.length} ejemplares eliminados`);
+      setIsBulkConfirmOpen(false);
+      setSelectedIds([]);
     },
     onError: (error: Error) => toast.error(error.message)
   });
@@ -65,6 +93,10 @@ export default function BookCopiesView() {
     if (deletingId) {
       deleteMutation.mutate(deletingId);
     }
+  };
+
+  const handleConfirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(selectedIds);
   };
 
   const getStatusColor = (status: CopyStatus) => {
@@ -124,12 +156,15 @@ export default function BookCopiesView() {
 
   return (
     <div className="space-y-8">
-      <CopyModal 
-        isOpen={isModalOpen}
-        setIsOpen={setIsModalOpen}
-        bookId={bookId!}
-        editingCopy={editingCopy}
-      />
+      {book && (
+        <CopyModal 
+          isOpen={isModalOpen}
+          setIsOpen={setIsModalOpen}
+          bookId={book.bookId}
+          slug={slug!}
+          editingCopy={editingCopy}
+        />
+      )}
 
       <ConfirmModal 
         isOpen={isConfirmOpen}
@@ -140,10 +175,19 @@ export default function BookCopiesView() {
         isLoading={deleteMutation.isPending}
       />
 
+      <ConfirmModal 
+        isOpen={isBulkConfirmOpen}
+        setIsOpen={setIsBulkConfirmOpen}
+        title="¿Eliminar Ejemplares Seleccionados?"
+        description={`Esta acción eliminará ${selectedIds.length} ejemplares físicos de forma permanente. No se puede deshacer.`}
+        onConfirm={handleConfirmBulkDelete}
+        isLoading={bulkDeleteMutation.isPending}
+      />
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate('/dashboard/catalogue')}
+            onClick={() => navigate('/catalogue')}
             className="p-2 hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-white"
           >
             <ArrowLeftIcon className="w-6 h-6" />
@@ -154,41 +198,60 @@ export default function BookCopiesView() {
           </div>
         </div>
 
-        {isAdmin && (
-          <button
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-            onClick={handleCreate}
-          >
-            <PlusIcon className="w-5 h-5" />
-            <span>Añadir Ejemplar</span>
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          <BulkActionsBar 
+            selectedCount={selectedIds.length}
+            onDelete={() => setIsBulkConfirmOpen(true)}
+            onClearSelection={() => setSelectedIds([])}
+            itemName="ejemplares"
+          />
+
+          {isAdmin && (
+            <button
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
+              onClick={handleCreate}
+            >
+              <PlusIcon className="w-5 h-5" />
+              <span>Añadir Ejemplar</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden">
-        <LibraryTable
-          data={copies || []}
-          columns={columns}
-          emptyMessage="No hay ejemplares registrados para este libro"
-          emptyIcon={QrCodeIcon}
-          renderActions={(copy) => isAdmin ? (
-            <div className="flex justify-end gap-2">
-              <button 
-                className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
-                title="Editar"
-                onClick={() => handleEdit(copy)}
-              >
-                <PencilSquareIcon className="w-5 h-5" />
-              </button>
-              <button 
-                className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
-                title="Eliminar"
-                onClick={() => handleDeleteClick(copy.copyId)}
-              >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-            </div>
-          ) : null}
+      <div className="space-y-6">
+      <LibraryTable
+        data={paginatedCopies}
+        columns={columns}
+        emptyMessage="No hay ejemplares registrados para este libro"
+        emptyIcon={QrCodeIcon}
+        selectable={isAdmin}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        idExtractor={(copy) => copy.copyId}
+        renderActions={(copy) => isAdmin ? (
+          <div className="flex justify-end gap-2">
+            <button 
+              className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
+              title="Editar"
+              onClick={() => handleEdit(copy)}
+            >
+              <PencilSquareIcon className="w-5 h-5" />
+            </button>
+            <button 
+              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
+              title="Eliminar"
+              onClick={() => handleDeleteClick(copy.copyId)}
+            >
+              <TrashIcon className="w-5 h-5" />
+            </button>
+          </div>
+        ) : null}
+      />
+
+        <Pagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
         />
       </div>
     </div>

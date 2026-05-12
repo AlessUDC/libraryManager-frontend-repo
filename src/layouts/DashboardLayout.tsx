@@ -59,6 +59,8 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
     navigate('/auth/login');
   };
 
+  const isStudent = role.toLowerCase() === 'estudiante' || role.toLowerCase() === 'student';
+
   return (
     <div className="min-h-screen bg-[#0F1523] text-slate-200 flex">
       {/* Overlay for mobile */}
@@ -127,7 +129,11 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
               className="flex items-center space-x-3 border-r border-slate-800 pr-6 cursor-pointer group"
             >
               <div className="text-right">
-                <p className="text-sm font-bold text-white leading-none group-hover:text-blue-400 transition-colors">Usuario</p>
+                <div className="max-w-[180px] overflow-hidden">
+                  <p className="text-sm font-bold text-white leading-none group-hover:text-blue-400 transition-colors truncate">
+                    {JSON.parse(localStorage.getItem('user') || '{}').name || 'Usuario'}
+                  </p>
+                </div>
                 <p className="text-[10px] text-slate-500 uppercase tracking-tighter mt-1">{role}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold border border-slate-700 shadow-lg transform group-hover:scale-105 transition-all">

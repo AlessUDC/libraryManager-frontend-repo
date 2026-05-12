@@ -49,6 +49,10 @@ export const deleteCategory = async (id: string): Promise<void> => {
   }
 };
 
+export const deleteMultipleCategories = async (ids: string[]): Promise<void> => {
+  await Promise.all(ids.map(id => deleteCategory(id)));
+};
+
 export const getCategoryById = async (id: string): Promise<Category> => {
   try {
     const response = await api.get(`/categories/${id}`);

@@ -64,18 +64,6 @@ export default function AcademicData({ role }: AcademicDataProps) {
             />
             {errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
           </div>
-          <div className="space-y-1">
-            <input 
-              type="password" 
-              placeholder="Contraseña *" 
-              {...register('password', { 
-                required: 'La contraseña es obligatoria', 
-                minLength: { value: 6, message: 'La contraseña debe tener al menos 6 caracteres' } 
-              })}
-              className={`w-full bg-slate-900/50 border ${errors.password ? 'border-red-500/50 ring-1 ring-red-500/20' : 'border-slate-800'} rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 placeholder-slate-600 text-white`}
-            />
-            {errors.password && <ErrorMessage>{errors.password.message}</ErrorMessage>}
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

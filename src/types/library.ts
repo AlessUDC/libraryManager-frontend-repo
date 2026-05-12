@@ -12,6 +12,7 @@ export interface Category {
 export interface Author {
   authorId: string;
   name: string;
+  slug: string;
   nationality?: string;
   biography?: string;
   activeState: boolean;
@@ -20,17 +21,18 @@ export interface Author {
 export interface Book {
   bookId: string;
   title: string;
+  slug: string;
   isbn?: string;
   publisher?: string;
   publicationYear?: number;
   edition?: string;
   language?: string;
   description?: string;
-  coverUrl?: string;
   activeState: boolean;
   categories?: Category[];
   authors?: Author[];
-  copiesCount?: number;
+  totalCopies?: number;
+  availableCopies?: number;
   copies?: Copy[];
 }
 
@@ -78,7 +80,6 @@ export interface CreateBookDto {
   edition?: string;
   language?: string;
   description?: string;
-  coverUrl?: string;
   activeState?: boolean;
   categoryIds?: string[];
   authorIds?: string[];
@@ -92,7 +93,6 @@ export interface UpdateBookDto {
   edition?: string;
   language?: string;
   description?: string;
-  coverUrl?: string;
   activeState?: boolean;
   categoryIds?: string[];
   authorIds?: string[];
@@ -106,6 +106,7 @@ export interface CreateCopyDto {
   condition?: CopyCondition;
   bookId: string;
   activeState?: boolean;
+  quantity?: number;
 }
 
 export interface UpdateCopyDto {

@@ -1,5 +1,4 @@
-import { Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createBook, updateBook } from '../../api/books';
@@ -25,13 +24,12 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateBookDto>({
     values: editingBook ? {
       title: editingBook.title,
-      isbn: editingBook.isbn,
-      publisher: editingBook.publisher,
-      publicationYear: editingBook.publicationYear,
-      edition: editingBook.edition,
-      language: editingBook.language,
-      description: editingBook.description,
-      coverUrl: editingBook.coverUrl,
+      isbn: editingBook.isbn || '',
+      publisher: editingBook.publisher || '',
+      publicationYear: editingBook.publicationYear || undefined,
+      edition: editingBook.edition || '',
+      language: editingBook.language || '',
+      description: editingBook.description || '',
       activeState: editingBook.activeState,
       authorIds: editingBook.authors?.map(a => a.authorId) || [],
       categoryIds: editingBook.categories?.map(c => c.categoryId) || [],
@@ -68,10 +66,9 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
   };
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
+    <Transition show={isOpen}>
       <Dialog as="div" className="relative z-50" onClose={handleClose}>
-        <Transition.Child
-          as={Fragment}
+        <TransitionChild
           enter="ease-out duration-300"
           enterFrom="opacity-0"
           enterTo="opacity-100"
@@ -80,12 +77,11 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
           leaveTo="opacity-0"
         >
           <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md" />
-        </Transition.Child>
+        </TransitionChild>
 
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child
-              as={Fragment}
+            <TransitionChild
               enter="ease-out duration-300"
               enterFrom="opacity-0 scale-95"
               enterTo="opacity-100 scale-100"
@@ -93,12 +89,12 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-[2rem] bg-[#0F1523] border border-slate-800 p-10 text-left align-middle shadow-2xl transition-all">
+              <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-[2rem] bg-[#0F1523] border border-slate-800 p-10 text-left align-middle shadow-2xl transition-all">
                 <div className="flex justify-between items-center mb-8">
                   <div>
-                    <Dialog.Title as="h3" className="text-3xl font-black text-white">
+                    <DialogTitle as="h3" className="text-3xl font-black text-white">
                       {editingBook ? 'Editar Libro' : 'Nuevo Libro'}
-                    </Dialog.Title>
+                    </DialogTitle>
                     <p className="text-slate-500 mt-1">Completa la información bibliográfica</p>
                   </div>
                   <button onClick={handleClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-500 hover:text-white transition-all">
@@ -172,15 +168,6 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
 
                   {/* Right Column: Relations & Media */}
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">URL de Portada</label>
-                      <input
-                        type="url"
-                        className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-3 px-5 text-white focus:ring-2 focus:ring-blue-500/50 outline-hidden transition-all"
-                        placeholder="https://..."
-                        {...register('coverUrl')}
-                      />
-                    </div>
 
                     <div>
                       <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Autores</label>
@@ -227,8 +214,8 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
                     </div>
                   </div>
                 </form>
-              </Dialog.Panel>
-            </Transition.Child>
+              </DialogPanel>
+            </TransitionChild>
           </div>
         </div>
       </Dialog>

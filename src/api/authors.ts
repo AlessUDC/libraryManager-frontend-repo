@@ -14,6 +14,18 @@ export const getAuthors = async (): Promise<Author[]> => {
   }
 };
 
+export const getAuthorById = async (id: string): Promise<Author> => {
+  try {
+    const response = await api.get(`/authors/${id}`);
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || 'Error al obtener el autor');
+    }
+    throw new Error('No se pudo conectar con el servidor');
+  }
+};
+
 export const createAuthor = async (data: CreateAuthorDto): Promise<Author> => {
   try {
     const response = await api.post('/authors', data);
@@ -47,5 +59,9 @@ export const deleteAuthor = async (id: string): Promise<void> => {
     }
     throw new Error('No se pudo conectar con el servidor');
   }
+};
+
+export const deleteMultipleAuthors = async (ids: string[]): Promise<void> => {
+  await Promise.all(ids.map(id => deleteAuthor(id)));
 };
 

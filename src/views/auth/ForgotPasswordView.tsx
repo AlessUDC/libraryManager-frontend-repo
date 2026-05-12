@@ -92,7 +92,7 @@ export default function ForgotPasswordView() {
 
         <div className="mt-8 pt-6 border-t border-slate-800/50 text-center">
           <p className="text-slate-500 text-sm">
-            ¿Recordaste tu contraseña?{' '}
+            Volver a{' '}
             <Link
               to="/auth/login"
               className="text-blue-500 hover:text-blue-400 font-bold transition-colors ml-1"

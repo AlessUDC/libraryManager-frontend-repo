@@ -17,7 +17,14 @@ export default function LoginView() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       toast.success(data.message || 'Inicio de sesión exitoso');
-      navigate('/'); // Redirigir al home básico
+      const userRole = (data.user.role || '').toUpperCase();
+      const adminLibrarian = ['ADMINISTRATOR', 'LIBRARIAN'];
+      
+      if (adminLibrarian.includes(userRole)) {
+        navigate('/dashboard');
+      } else {
+        navigate('/explore');
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || 'Error al iniciar sesión');
@@ -103,18 +110,6 @@ export default function LoginView() {
             </button>
           </div>
         </form>
-
-        <div className="mt-8 pt-6 border-t border-slate-800/50 text-center">
-          <p className="text-slate-500 text-sm">
-            ¿No tienes una cuenta?{' '}
-            <Link
-              to="/auth/register"
-              className="text-blue-500 hover:text-blue-400 font-bold transition-colors ml-1"
-            >
-              Regístrate aquí
-            </Link>
-          </p>
-        </div>
       </div>
     </AuthLayout>
   );

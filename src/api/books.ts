@@ -70,11 +70,15 @@ export const deleteBook = async (id: string): Promise<void> => {
   }
 };
 
+export const deleteMultipleBooks = async (ids: string[]): Promise<void> => {
+  await Promise.all(ids.map(id => deleteBook(id)));
+};
+
 // --- Copies ---
 
-export const createCopy = async (data: CreateCopyDto): Promise<Copy> => {
+export const createCopy = async (data: CreateCopyDto): Promise<Copy | Copy[]> => {
   try {
-    const response = await api.post('/books/copies', data);
+    const response = await api.post<Copy | Copy[]>('/books/copies', data);
     return response.data;
   } catch (error) {
     if (isAxiosError(error) && error.response) {
@@ -117,5 +121,9 @@ export const deleteCopy = async (copyId: string): Promise<void> => {
     }
     throw new Error('No se pudo conectar con el servidor');
   }
+};
+
+export const deleteMultipleCopies = async (ids: string[]): Promise<void> => {
+  await Promise.all(ids.map(id => deleteCopy(id)));
 };
 

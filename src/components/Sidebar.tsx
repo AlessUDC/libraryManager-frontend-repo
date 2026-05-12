@@ -6,7 +6,7 @@ import ClipboardIcon from '../assets/svg/SidebarClipboard';
 import LogoutIcon from '../assets/svg/Logout';
 import ChevronRightIcon from '../assets/svg/ChevronRight';
 import ChevronLeftIcon from '../assets/svg/ChevronLeft';
-import { UserGroupIcon, TagIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, TagIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -25,13 +25,30 @@ export default function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
 
-  const menuItems = [
+  const isStudentOrTeacher = ['estudiante', 'student', 'docente', 'teacher'].includes(role.toLowerCase());
+
+  const allMenuItems = [
     { name: 'Inicio', icon: HomeIcon, path: '/' },
-    { name: 'Catálogo', icon: BookIcon, path: '/dashboard/catalogue' },
-    { name: 'Autores', icon: UserGroupIcon, path: '/dashboard/authors' },
-    { name: 'Categorías', icon: TagIcon, path: '/dashboard/categories' },
-    { name: 'Mis Préstamos', icon: ClipboardIcon, path: '#' },
+    { name: 'Explorar', icon: MagnifyingGlassIcon, path: '/explore' },
+    { name: 'Catálogo', icon: BookIcon, path: '/catalogue' },
+    { name: 'Autores', icon: UserGroupIcon, path: '/authors' },
+    { name: 'Categorías', icon: TagIcon, path: '/categories' },
+    { name: 'Mis Préstamos', icon: ClipboardIcon, path: '/loans' },
+    { name: 'Usuarios', icon: UserGroupIcon, path: '/users' },
   ];
+
+  const menuItems = allMenuItems.filter(item => {
+    if (item.name === 'Inicio') return true;
+    if (isStudentOrTeacher) {
+      return ['Explorar', 'Mis Préstamos'].includes(item.name);
+    }
+    // Para Bibliotecario o Admin
+    const isAdmin = role.toUpperCase() === 'ADMINISTRATOR';
+    if (isAdmin) {
+      return ['Catálogo', 'Autores', 'Categorías', 'Usuarios'].includes(item.name);
+    }
+    return ['Catálogo', 'Autores', 'Categorías'].includes(item.name);
+  });
 
 
   return (

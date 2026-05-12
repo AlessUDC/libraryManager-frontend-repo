@@ -12,10 +12,11 @@ type CopyModalProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   bookId: string;
+  slug: string;
   editingCopy: Copy | null;
 };
 
-export default function CopyModal({ isOpen, setIsOpen, bookId, editingCopy }: CopyModalProps) {
+export default function CopyModal({ isOpen, setIsOpen, bookId, slug, editingCopy }: CopyModalProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateCopyDto>();
 
@@ -40,7 +41,7 @@ export default function CopyModal({ isOpen, setIsOpen, bookId, editingCopy }: Co
   const createMutation = useMutation({
     mutationFn: createCopy,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['copies', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['copies', slug] });
       queryClient.invalidateQueries({ queryKey: ['books'] });
       toast.success('Ejemplar añadido');
       handleClose();
@@ -51,7 +52,7 @@ export default function CopyModal({ isOpen, setIsOpen, bookId, editingCopy }: Co
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string, data: CreateCopyDto }) => updateCopy(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['copies', bookId] });
+      queryClient.invalidateQueries({ queryKey: ['copies', slug] });
       toast.success('Ejemplar actualizado');
       handleClose();
     },
@@ -92,13 +93,30 @@ export default function CopyModal({ isOpen, setIsOpen, bookId, editingCopy }: Co
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {!editingCopy && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Cantidad de Ejemplares</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-4 px-5 text-white focus:ring-2 focus:ring-blue-500/50 outline-hidden transition-all"
+                        {...register('quantity', { valueAsNumber: true })}
+                        defaultValue={1}
+                      />
+                      <p className="text-[10px] text-slate-600 mt-1 ml-1 font-bold italic">* Puedes crear hasta 50 de una vez</p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Código de Barras</label>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
+                      Código de Barras {editingCopy ? '' : '(Opcional)'}
+                    </label>
                     <input
                       type="text"
                       className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-4 px-5 text-white focus:ring-2 focus:ring-blue-500/50 outline-hidden transition-all"
-                      placeholder="Ej: BC-001"
-                      {...register('barcode', { required: 'El código de barras es obligatorio' })}
+                      placeholder={editingCopy ? "" : "Dejar vacío para auto-generar"}
+                      {...register('barcode', { required: editingCopy ? 'El código es obligatorio para editar' : false })}
                     />
                     {errors.barcode && <ErrorMessage>{errors.barcode.message}</ErrorMessage>}
                   </div>
@@ -117,14 +135,16 @@ export default function CopyModal({ isOpen, setIsOpen, bookId, editingCopy }: Co
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Estado</label>
                       <select 
-                        className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-4 px-5 text-white focus:ring-2 focus:ring-blue-500/50 outline-hidden transition-all"
+                        className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 px-5 text-slate-400 outline-hidden transition-all cursor-not-allowed"
                         {...register('status')}
+                        disabled
                       >
                         <option value="AVAILABLE">Disponible</option>
                         <option value="LENT">Prestado</option>
                         <option value="RESERVED">Reservado</option>
                         <option value="MAINTENANCE">Mantenimiento</option>
                       </select>
+                      <p className="text-[10px] text-slate-600 mt-1 ml-1 font-bold italic">* Se asigna automáticamente</p>
                     </div>
 
                     <div className="space-y-2">

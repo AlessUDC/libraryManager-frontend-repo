@@ -1,22 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getBooks, deleteBook } from '../../api/books';
+import { getBooks, deleteBook, deleteMultipleBooks } from '../../api/books';
 import ErrorMessage from '../../components/ErrorMessage';
 import { useState, useMemo } from 'react';
 import { MagnifyingGlassIcon, PlusIcon, BookOpenIcon, PencilSquareIcon, TrashIcon, QrCodeIcon } from '@heroicons/react/24/outline';
-import BookModal from '../../components/library/BookModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import LibraryTable from '../../components/library/LibraryTable';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Book } from '../../types/library';
 import { toast } from 'react-toastify';
+import Pagination from '../../components/Pagination';
+import BulkActionsBar from '../../components/library/BulkActionsBar';
 
 export default function CatalogueView() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const navigate = useNavigate();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: books, isLoading, isError, error } = useQuery({
     queryKey: ['books'],
@@ -29,20 +35,32 @@ export default function CatalogueView() {
       queryClient.invalidateQueries({ queryKey: ['books'] });
       toast.success('Libro eliminado');
       setIsConfirmOpen(false);
+      setSelectedIds([]);
     },
     onError: (error: Error) => {
       toast.error(error.message);
     }
   });
 
-  const handleEdit = (book: Book) => {
-    setEditingBook(book);
-    setIsBookModalOpen(true);
+  const bulkDeleteMutation = useMutation({
+    mutationFn: deleteMultipleBooks,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books'] });
+      toast.success(`${selectedIds.length} libros eliminados`);
+      setIsBulkConfirmOpen(false);
+      setSelectedIds([]);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const handleEdit = (slug: string) => {
+    navigate(`/catalogue/${slug}/edit`);
   };
 
   const handleCreate = () => {
-    setEditingBook(null);
-    setIsBookModalOpen(true);
+    navigate('/catalogue/create');
   };
 
   const handleDeleteClick = (id: string) => {
@@ -56,6 +74,10 @@ export default function CatalogueView() {
     }
   };
 
+  const handleConfirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(selectedIds);
+  };
+
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
   const role = user?.role?.toLowerCase() || '';
@@ -64,11 +86,20 @@ export default function CatalogueView() {
   const filteredBooks = useMemo(() => {
     if (!books) return [];
     return books.filter(book => 
-      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.isbn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.authors?.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      book.activeState && (
+        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.publisher?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.authors?.some(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
     );
   }, [books, searchTerm]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
+  const paginatedBooks = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredBooks.slice(start, start + itemsPerPage);
+  }, [filteredBooks, currentPage]);
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">
@@ -83,18 +114,12 @@ export default function CatalogueView() {
       header: 'Libro',
       render: (book: Book) => (
         <div className="flex items-center gap-4">
-          <div className="w-12 h-16 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0 border border-slate-700">
-            {book.coverUrl ? (
-              <img src={book.coverUrl} alt={book.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-slate-600">
-                <BookOpenIcon className="w-6 h-6" />
-              </div>
-            )}
+          <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400 border border-blue-500/20">
+            <BookOpenIcon className="w-5 h-5" />
           </div>
           <div className="max-w-xs">
             <Link 
-              to={`/dashboard/catalogue/${book.bookId}/ejemplares`}
+              to={`/catalogue/${book.slug}/ejemplares`}
               className="text-sm font-bold text-white hover:text-blue-400 transition-colors line-clamp-1"
             >
               {book.title}
@@ -107,11 +132,16 @@ export default function CatalogueView() {
       )
     },
     {
-      header: 'ISBN',
+      header: 'Editorial / Año',
       render: (book: Book) => (
-        <span className="text-xs font-medium text-slate-400 font-mono">
-          {book.isbn || 'N/A'}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-xs font-bold text-white line-clamp-1">
+            {book.publisher || 'Sin Editorial'}
+          </span>
+          <span className="text-[10px] text-slate-500 font-medium">
+            {book.publicationYear || 'Año N/A'}
+          </span>
+        </div>
       )
     },
     {
@@ -133,9 +163,10 @@ export default function CatalogueView() {
       header: 'Disponibilidad',
       render: (book: Book) => (
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${book.copiesCount && book.copiesCount > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-xs font-bold text-slate-300">
-            {book.copiesCount || 0} ejemplares
+          <div className={`w-2 h-2 rounded-full ${(book.availableCopies || 0) > 0 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`} />
+          <span className="text-xs font-black text-slate-200">
+            {book.availableCopies || 0} / {book.totalCopies || 0}
+            <span className="ml-1.5 text-slate-500 font-medium">disponibles</span>
           </span>
         </div>
       )
@@ -144,12 +175,6 @@ export default function CatalogueView() {
 
   return (
     <div className="space-y-8">
-      <BookModal 
-        isOpen={isBookModalOpen}
-        setIsOpen={setIsBookModalOpen}
-        editingBook={editingBook}
-      />
-
       <ConfirmModal 
         isOpen={isConfirmOpen}
         setIsOpen={setIsConfirmOpen}
@@ -159,21 +184,39 @@ export default function CatalogueView() {
         isLoading={deleteMutation.isPending}
       />
 
+      <ConfirmModal 
+        isOpen={isBulkConfirmOpen}
+        setIsOpen={setIsBulkConfirmOpen}
+        title="¿Eliminar Libros Seleccionados?"
+        description={`Esta acción eliminará ${selectedIds.length} libros y todos sus ejemplares asociados de forma permanente.`}
+        onConfirm={handleConfirmBulkDelete}
+        isLoading={bulkDeleteMutation.isPending}
+      />
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white">Catálogo de Libros</h1>
           <p className="text-slate-400 mt-1">Explora y gestiona la colección de la biblioteca</p>
         </div>
 
-        {isAdmin && (
-          <button
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-            onClick={handleCreate}
-          >
-            <PlusIcon className="w-5 h-5" />
-            <span>Nuevo Libro</span>
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          <BulkActionsBar 
+            selectedCount={selectedIds.length}
+            onDelete={() => setIsBulkConfirmOpen(true)}
+            onClearSelection={() => setSelectedIds([])}
+            itemName="libros"
+          />
+
+          {isAdmin && (
+            <button
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
+              onClick={handleCreate}
+            >
+              <PlusIcon className="w-5 h-5" />
+              <span>Nuevo Libro</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -182,49 +225,64 @@ export default function CatalogueView() {
             <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
-              placeholder="Buscar por título, autor o ISBN..."
+              placeholder="Buscar por título, autor o editorial..."
               className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to page 1 on search
+              }}
             />
           </div>
         </div>
 
-        <LibraryTable
-          data={filteredBooks}
-          columns={columns}
-          emptyMessage="No se encontraron libros"
-          emptyIcon={BookOpenIcon}
-          renderActions={(book) => (
-            <div className="flex justify-end gap-2">
-              <Link 
-                to={`/dashboard/catalogue/${book.bookId}/ejemplares`}
-                className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
-                title="Gestionar Ejemplares"
-              >
-                <QrCodeIcon className="w-5 h-5" />
-              </Link>
-              {isAdmin && (
-                <>
-                  <button 
-                    className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
-                    title="Editar"
-                    onClick={() => handleEdit(book)}
-                  >
-                    <PencilSquareIcon className="w-5 h-5" />
-                  </button>
-                  <button 
-                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
-                    title="Eliminar"
-                    onClick={() => handleDeleteClick(book.bookId)}
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        />
+        <div className="space-y-6">
+          <LibraryTable
+            data={paginatedBooks}
+            columns={columns}
+            emptyMessage="No se encontraron libros"
+            emptyIcon={BookOpenIcon}
+            selectable={isAdmin}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            idExtractor={(book) => book.bookId}
+            renderActions={(book) => (
+              <div className="flex justify-end gap-2">
+                <Link 
+                  to={`/catalogue/${book.slug}/ejemplares`}
+                  className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
+                  title="Gestionar Ejemplares"
+                >
+                  <QrCodeIcon className="w-5 h-5" />
+                </Link>
+                {isAdmin && (
+                  <>
+                    <button 
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
+                      title="Editar"
+                      onClick={() => handleEdit(book.slug || book.bookId)}
+                    >
+                      <PencilSquareIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
+                      title="Eliminar"
+                      onClick={() => handleDeleteClick(book.bookId)}
+                    >
+                      <TrashIcon className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          />
+
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
     </div>
   );

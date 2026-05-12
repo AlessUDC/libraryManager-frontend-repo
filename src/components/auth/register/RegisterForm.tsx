@@ -29,8 +29,10 @@ export default function RegisterForm({ role }: RoleProps) {
     mutationFn: registerUser,
     onSuccess: () => {
       const email = methods.getValues('email');
-      toast.success('Cuenta creada. Por favor verifica tu correo.');
-      navigate('/auth/confirm', { state: { email } });
+      toast.success('Cuenta creada. Por favor verifica tu correo para activar tu acceso y establecer tu contraseña.', {
+        autoClose: 10000
+      });
+      navigate('/auth/login');
     },
     onError: (error) => {
       toast.error(error.message);
