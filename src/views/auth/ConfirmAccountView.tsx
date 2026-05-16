@@ -30,7 +30,7 @@ export default function ConfirmAccountView() {
       toast.success(data.message || 'Cuenta confirmada correctamente');
       navigate('/auth/login');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al confirmar la cuenta');
     }
   });

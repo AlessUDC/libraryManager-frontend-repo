@@ -1,15 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getBookById, getCopiesByBook, deleteCopy, deleteMultipleCopies } from '../../api/books';
-import { BookOpenIcon, PlusIcon, TrashIcon, MapPinIcon, ArrowLeftIcon, PencilSquareIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, MapPinIcon, ArrowLeftIcon, PencilSquareIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import LibraryTable from '../../components/library/LibraryTable';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import type { Copy, CopyStatus, CopyCondition } from '../../types/library';
+import type { Copy, CopyStatus } from '../../types/library';
 import CopyModal from '../../components/library/CopyModal';
 import Pagination from '../../components/Pagination';
 import BulkActionsBar from '../../components/library/BulkActionsBar';
+import ReservationModal from '../../components/library/ReservationModal';
 
 export default function BookCopiesView() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,6 +22,8 @@ export default function BookCopiesView() {
   const [editingCopy, setEditingCopy] = useState<Copy | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+  const [isResModalOpen, setIsResModalOpen] = useState(false);
+  const [selectedResCopyId, setSelectedResCopyId] = useState<string | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,7 +75,8 @@ export default function BookCopiesView() {
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
   const role = user?.role?.toLowerCase() || '';
-  const isAdmin = ['administrador', 'docente', 'bibliotecario', 'administrator', 'teacher', 'librarian', 'admin'].includes(role);
+  const isManagement = ['administrador', 'bibliotecario', 'administrator', 'librarian', 'admin'].includes(role);
+  const isUser = ['estudiante', 'docente', 'student', 'teacher'].includes(role);
 
   const handleEdit = (copy: Copy) => {
     setEditingCopy(copy);
@@ -104,6 +108,7 @@ export default function BookCopiesView() {
       case 'AVAILABLE': return 'bg-green-500/10 text-green-400 border-green-500/20';
       case 'LENT': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'RESERVED': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'HELD': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
       case 'MAINTENANCE': return 'bg-red-500/10 text-red-400 border-red-500/20';
       default: return 'bg-slate-500/10 text-slate-400';
     }
@@ -166,6 +171,16 @@ export default function BookCopiesView() {
         />
       )}
 
+      {selectedResCopyId && book && (
+        <ReservationModal 
+          isOpen={isResModalOpen}
+          setIsOpen={setIsResModalOpen}
+          copyId={selectedResCopyId}
+          bookTitle={book.title}
+          userRole={user?.role || 'STUDENT'}
+        />
+      )}
+
       <ConfirmModal 
         isOpen={isConfirmOpen}
         setIsOpen={setIsConfirmOpen}
@@ -206,7 +221,7 @@ export default function BookCopiesView() {
             itemName="ejemplares"
           />
 
-          {isAdmin && (
+          {isManagement && (
             <button
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 active:scale-95"
               onClick={handleCreate}
@@ -224,11 +239,11 @@ export default function BookCopiesView() {
         columns={columns}
         emptyMessage="No hay ejemplares registrados para este libro"
         emptyIcon={QrCodeIcon}
-        selectable={isAdmin}
+        selectable={isManagement}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         idExtractor={(copy) => copy.copyId}
-        renderActions={(copy) => isAdmin ? (
+        renderActions={(copy) => isManagement ? (
           <div className="flex justify-end gap-2">
             <button 
               className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
@@ -244,6 +259,20 @@ export default function BookCopiesView() {
             >
               <TrashIcon className="w-5 h-5" />
             </button>
+          </div>
+        ) : isUser ? (
+          <div className="flex justify-end">
+            {copy.status === 'AVAILABLE' && (
+              <button
+                onClick={() => {
+                  setSelectedResCopyId(copy.copyId);
+                  setIsResModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+              >
+                Reservar
+              </button>
+            )}
           </div>
         ) : null}
       />

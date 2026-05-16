@@ -89,7 +89,7 @@ export default function BookModal({ isOpen, setIsOpen, editingBook }: BookModalP
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-[2rem] bg-[#0F1523] border border-slate-800 p-10 text-left align-middle shadow-2xl transition-all">
+              <DialogPanel className="w-full max-w-4xl transform overflow-hidden rounded-4xl bg-[#0F1523] border border-slate-800 p-10 text-left align-middle shadow-2xl transition-all">
                 <div className="flex justify-between items-center mb-8">
                   <div>
                     <DialogTitle as="h3" className="text-3xl font-black text-white">

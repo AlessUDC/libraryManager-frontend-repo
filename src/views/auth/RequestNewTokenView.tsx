@@ -19,7 +19,7 @@ export default function RequestNewTokenView() {
       toast.success(data.message || 'Nuevo código enviado');
       navigate('/auth/confirm', { state: { email: variables } });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al solicitar nuevo código');
     }
   });

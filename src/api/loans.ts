@@ -25,7 +25,12 @@ export const createLoan = async (loanData: { userId: string, copyId: string, due
   return data;
 };
 
-export const returnLoan = async (loanId: string) => {
-  const { data } = await axios.patch(`/loans/${loanId}/return`);
+export const returnLoan = async (loanId: string, returnData: { condition: string, observations?: string }) => {
+  const { data } = await axios.patch(`/loans/${loanId}/return`, returnData);
+  return data;
+};
+
+export const getLoans = async (): Promise<Loan[]> => {
+  const { data } = await axios.get('/loans');
   return data;
 };

@@ -10,7 +10,7 @@ export default function ActivateAccountView() {
   const { token } = useParams();
   const navigate = useNavigate();
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<{ password: string; passwordConfirmation: string; }>();
 
   const { mutate, isPending } = useMutation({
     mutationFn: activateAccount,
@@ -18,12 +18,12 @@ export default function ActivateAccountView() {
       toast.success(data.message || 'Cuenta activada correctamente');
       navigate('/auth/login');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al activar la cuenta');
     }
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: { password: string; passwordConfirmation: string }) => {
     if (!token) return;
     mutate({
       token,

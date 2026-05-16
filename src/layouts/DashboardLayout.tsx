@@ -59,7 +59,6 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
     navigate('/auth/login');
   };
 
-  const isStudent = role.toLowerCase() === 'estudiante' || role.toLowerCase() === 'student';
 
   return (
     <div className="min-h-screen bg-[#0F1523] text-slate-200 flex">

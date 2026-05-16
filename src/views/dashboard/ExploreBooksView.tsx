@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MagnifyingGlassIcon, BookOpenIcon, UserIcon, AdjustmentsHorizontalIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, BookmarkIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, UserIcon, AdjustmentsHorizontalIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { getBooks } from '../../api/books';
 import type { Book } from '../../types/library';
@@ -215,7 +215,7 @@ export default function ExploreBooksView() {
               className="group relative bg-slate-900/40 backdrop-blur-sm border border-slate-800 rounded-[2.5rem] p-5 hover:border-blue-500/50 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-900/20 flex flex-col cursor-pointer"
             >
               {/* Iconic Cover */}
-              <div className={`relative aspect-3/4 overflow-hidden rounded-[2rem] shadow-xl flex items-center justify-center bg-linear-to-br ${getlinearForBook(book.bookId)}`}>
+              <div className={`relative aspect-3/4 overflow-hidden rounded-4xl shadow-xl flex items-center justify-center bg-linear-to-br ${getlinearForBook(book.bookId)}`}>
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500" />
                 <div className="text-white/30 text-8xl font-black uppercase select-none transform group-hover:scale-110 transition-transform duration-700">
                   {book.title.charAt(0)}
@@ -250,7 +250,7 @@ export default function ExploreBooksView() {
                   </span>
                 </div>
                 
-                <div className="flex-1 min-h-[3.5rem]">
+                <div className="flex-1 min-h-14">
                   <h3 className="text-lg font-black text-white group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                     {book.title}
                   </h3>

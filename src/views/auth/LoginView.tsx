@@ -8,7 +8,7 @@ import ErrorMessage from '../../components/ErrorMessage';
 
 export default function LoginView() {
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const { register, handleSubmit, formState: { errors } } = useForm<{ code: string; password: string; }>();
 
   const { mutate, isPending } = useMutation({
     mutationFn: loginUser,
@@ -21,17 +21,17 @@ export default function LoginView() {
       const adminLibrarian = ['ADMINISTRATOR', 'LIBRARIAN'];
       
       if (adminLibrarian.includes(userRole)) {
-        navigate('/dashboard');
+        navigate('/');
       } else {
         navigate('/explore');
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al iniciar sesión');
     }
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: { code: string; password: string }) => {
     mutate({
       code: data.code,
       password: data.password,

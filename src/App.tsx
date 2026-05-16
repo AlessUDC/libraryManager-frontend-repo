@@ -15,12 +15,16 @@ import CategoriesView from './views/dashboard/CategoriesView';
 import BookCopiesView from './views/dashboard/BookCopiesView';
 import ExploreBooksView from './views/dashboard/ExploreBooksView';
 import MyLoansView from './views/dashboard/MyLoansView';
+import MyReservationsView from './views/dashboard/MyReservationsView';
 import BookFormView from './views/dashboard/BookFormView';
 import AuthorFormView from './views/dashboard/AuthorFormView';
 import UsersView from './views/dashboard/UsersView';
 import UserFormView from './views/dashboard/UserFormView';
+import LoansView from './views/dashboard/LoansView';
 import NotFoundView from './views/NotFoundView';
 import AdminStatsView from './views/dashboard/AdminStatsView';
+import StudentDashboard from './views/dashboard/StudentDashboard';
+import TeacherDashboard from './views/dashboard/TeacherDashboard';
 import DashboardLayout from './layouts/DashboardLayout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -54,13 +58,21 @@ function App() {
   const adminLibrarian = ['ADMINISTRATOR', 'LIBRARIAN'];
   const allRoles = ['STUDENT', 'TEACHER', 'LIBRARIAN', 'ADMINISTRATOR'];
 
+  const DashboardSwitcher = () => {
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+    const role = (user?.role || 'STUDENT').toUpperCase();
 
+    if (role === 'ADMINISTRATOR' || role === 'LIBRARIAN') return <AdminStatsView />;
+    if (role === 'TEACHER') return <TeacherDashboard />;
+    return <StudentDashboard />;
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/explore" replace />} />
+          <Route path="/" element={<DashboardRoute allowedRoles={allRoles}><DashboardSwitcher /></DashboardRoute>} />
           <Route path="/auth/login" element={<LoginView />} />
           <Route path="/auth/register" element={<RegisterView />} />
           <Route path="/auth/confirm" element={<ConfirmAccountView />} />
@@ -71,7 +83,7 @@ function App() {
           <Route path="/auth/activate/:token" element={<ActivateAccountView />} />
           
           {/* Dashboard Routes */}
-          <Route path="/dashboard" element={<DashboardRoute allowedRoles={adminLibrarian}><AdminStatsView /></DashboardRoute>} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/catalogue" element={<DashboardRoute allowedRoles={adminLibrarian}><CatalogueView /></DashboardRoute>} />
           <Route path="/catalogue/create" element={<DashboardRoute allowedRoles={adminLibrarian}><BookFormView /></DashboardRoute>} />
           <Route path="/catalogue/:slug/edit" element={<DashboardRoute allowedRoles={adminLibrarian}><BookFormView /></DashboardRoute>} />
@@ -81,10 +93,12 @@ function App() {
           <Route path="/authors/:slug/edit" element={<DashboardRoute allowedRoles={adminLibrarian}><AuthorFormView /></DashboardRoute>} />
           
           <Route path="/categories" element={<DashboardRoute allowedRoles={adminLibrarian}><CategoriesView /></DashboardRoute>} />
-          <Route path="/catalogue/:slug/ejemplares" element={<DashboardRoute allowedRoles={adminLibrarian}><BookCopiesView /></DashboardRoute>} />
+          <Route path="/catalogue/:slug/ejemplares" element={<DashboardRoute allowedRoles={allRoles}><BookCopiesView /></DashboardRoute>} />
           
           <Route path="/explore" element={<DashboardRoute allowedRoles={allRoles}><ExploreBooksView /></DashboardRoute>} />
           <Route path="/loans" element={<DashboardRoute allowedRoles={allRoles}><MyLoansView /></DashboardRoute>} />
+          <Route path="/reservations" element={<DashboardRoute allowedRoles={allRoles}><MyReservationsView /></DashboardRoute>} />
+          <Route path="/manage-loans" element={<DashboardRoute allowedRoles={adminLibrarian}><LoansView /></DashboardRoute>} />
           
           <Route path="/users" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><UsersView /></DashboardRoute>} />
           <Route path="/users/create" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><UserFormView /></DashboardRoute>} />

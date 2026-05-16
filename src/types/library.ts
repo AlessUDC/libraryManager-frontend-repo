@@ -1,4 +1,4 @@
-export type CopyStatus = 'AVAILABLE' | 'LENT' | 'RESERVED' | 'MAINTENANCE';
+export type CopyStatus = 'AVAILABLE' | 'LENT' | 'RESERVED' | 'HELD' | 'MAINTENANCE';
 
 export type CopyCondition = 'NEW' | 'GOOD' | 'DAMAGED' | 'LOST';
 

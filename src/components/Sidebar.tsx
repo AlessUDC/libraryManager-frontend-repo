@@ -4,9 +4,10 @@ import HomeIcon from '../assets/svg/SidebarHomeIcon';
 import BookIcon from '../assets/svg/SidebarBook';
 import ClipboardIcon from '../assets/svg/SidebarClipboard';
 import LogoutIcon from '../assets/svg/Logout';
+
 import ChevronRightIcon from '../assets/svg/ChevronRight';
 import ChevronLeftIcon from '../assets/svg/ChevronLeft';
-import { UserGroupIcon, TagIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, TagIcon, MagnifyingGlassIcon, TicketIcon } from '@heroicons/react/24/outline';
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -34,20 +35,22 @@ export default function Sidebar({
     { name: 'Autores', icon: UserGroupIcon, path: '/authors' },
     { name: 'Categorías', icon: TagIcon, path: '/categories' },
     { name: 'Mis Préstamos', icon: ClipboardIcon, path: '/loans' },
+    { name: 'Mis Reservas', icon: TicketIcon, path: '/reservations' },
+    { name: 'Gestión Préstamos y Reservas', icon: ClipboardIcon, path: '/manage-loans' },
     { name: 'Usuarios', icon: UserGroupIcon, path: '/users' },
   ];
 
   const menuItems = allMenuItems.filter(item => {
     if (item.name === 'Inicio') return true;
     if (isStudentOrTeacher) {
-      return ['Explorar', 'Mis Préstamos'].includes(item.name);
+      return ['Explorar', 'Mis Préstamos', 'Mis Reservas'].includes(item.name);
     }
     // Para Bibliotecario o Admin
     const isAdmin = role.toUpperCase() === 'ADMINISTRATOR';
     if (isAdmin) {
-      return ['Catálogo', 'Autores', 'Categorías', 'Usuarios'].includes(item.name);
+      return ['Catálogo', 'Autores', 'Categorías', 'Usuarios', 'Gestión Préstamos y Reservas'].includes(item.name);
     }
-    return ['Catálogo', 'Autores', 'Categorías'].includes(item.name);
+    return ['Catálogo', 'Autores', 'Categorías', 'Gestión Préstamos y Reservas'].includes(item.name);
   });
 
 

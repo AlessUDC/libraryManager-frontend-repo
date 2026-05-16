@@ -6,12 +6,13 @@ import { deleteAccount } from '../api/auth';
 import { toast } from 'react-toastify';
 import XIcon from '../assets/svg/X';
 import UserIcon from '../assets/svg/User';
+import type { User } from '../types/user';
 
 type UserProfileModalProps = {
   isOpen: boolean;
   setIsOpen: Dispatch<SetStateAction<boolean>>;
   setIsCredentialsOpen: Dispatch<SetStateAction<boolean>>;
-  profile: any;
+  profile: User | null;
   isLoading: boolean;
   role: string;
 };
@@ -39,7 +40,7 @@ export default function UserProfileModal({
       setIsOpen(false);
       navigate('/auth/login');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     }
   });

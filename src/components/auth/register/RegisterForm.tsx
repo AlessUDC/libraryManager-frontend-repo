@@ -28,7 +28,6 @@ export default function RegisterForm({ role }: RoleProps) {
   const { mutate, isPending } = useMutation({
     mutationFn: registerUser,
     onSuccess: () => {
-      const email = methods.getValues('email');
       toast.success('Cuenta creada. Por favor verifica tu correo para activar tu acceso y establecer tu contraseña.', {
         autoClose: 10000
       });

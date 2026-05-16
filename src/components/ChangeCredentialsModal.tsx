@@ -7,11 +7,12 @@ import XIcon from '../assets/svg/X';
 import { getProvinces, getDistricts } from '../api/metadata';
 import { updateProfile } from '../api/auth';
 import ErrorMessage from '../components/ErrorMessage';
+import type { User } from '../types/user';
 
 type ChangeCredentialsModalProps = {
   isOpen: boolean;
   setIsOpen: Dispatch<SetStateAction<boolean>>;
-  profile: any;
+  profile: User | null;
 };
 
 type FormData = {
@@ -53,7 +54,7 @@ export default function ChangeCredentialsModal({ isOpen, setIsOpen, profile }: C
       queryClient.invalidateQueries({ queryKey: ['user-profile'] });
       setIsOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al actualizar el perfil');
     }
   });

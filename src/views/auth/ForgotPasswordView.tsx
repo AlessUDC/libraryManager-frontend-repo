@@ -19,7 +19,7 @@ export default function ForgotPasswordView() {
       toast.success(data.message || 'Instrucciones enviadas');
       navigate('/auth/reset-password', { state: { email: variables } });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Ocurrió un error');
     }
   });

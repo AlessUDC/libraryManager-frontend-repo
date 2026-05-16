@@ -62,7 +62,7 @@ export default function MyLoansView() {
 
       {/* Stats Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 flex items-center gap-6 shadow-xl">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-4xl p-6 flex items-center gap-6 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
             <BookOpenIcon className="w-7 h-7" />
           </div>
@@ -71,7 +71,7 @@ export default function MyLoansView() {
             <p className="text-3xl font-black text-white">{activeLoans.length}</p>
           </div>
         </div>
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 flex items-center gap-6 shadow-xl">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-4xl p-6 flex items-center gap-6 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
             <ExclamationTriangleIcon className="w-7 h-7" />
           </div>
@@ -80,7 +80,7 @@ export default function MyLoansView() {
             <p className="text-3xl font-black text-white">{overdueLoans.length}</p>
           </div>
         </div>
-        <div className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 flex items-center gap-6 shadow-xl">
+        <div className="bg-slate-900/50 border border-slate-800 rounded-4xl p-6 flex items-center gap-6 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
             <CheckCircleIcon className="w-7 h-7" />
           </div>
@@ -115,7 +115,7 @@ export default function MyLoansView() {
               const ringColor = isOverdue ? 'text-red-500/20' : daysLeft <= 3 ? 'text-amber-500/20' : 'text-emerald-500/20';
 
               return (
-                <div key={loan.loanId} className={`relative bg-slate-900/60 backdrop-blur-md border ${isOverdue ? 'border-red-500/30 shadow-red-900/20' : 'border-slate-800'} rounded-[2rem] p-6 shadow-xl flex flex-col`}>
+                <div key={loan.loanId} className={`relative bg-slate-900/60 backdrop-blur-md border ${isOverdue ? 'border-red-500/30 shadow-red-900/20' : 'border-slate-800'} rounded-4xl p-6 shadow-xl flex flex-col`}>
                   {isOverdue && (
                     <div className="absolute top-0 right-0 translate-x-2 -translate-y-2">
                       <span className="flex h-4 w-4">
@@ -134,7 +134,7 @@ export default function MyLoansView() {
                     </div>
                     
                     {/* Progress Ring */}
-                    <div className="relative w-16 h-16 flex-shrink-0">
+                    <div className="relative w-16 h-16 shrink-0">
                       <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                         <path
                           className={ringColor}
@@ -186,7 +186,7 @@ export default function MyLoansView() {
             Historial de Devoluciones
           </h2>
           
-          <div className="bg-slate-900/50 border border-slate-800 rounded-[2rem] overflow-hidden">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-4xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-300">
                 <thead className="bg-slate-900/80 text-xs uppercase text-slate-500 font-black tracking-widest border-b border-slate-800">

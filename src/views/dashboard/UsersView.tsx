@@ -85,7 +85,7 @@ export default function UsersView() {
     const loggedInUserString = localStorage.getItem('user');
     const loggedInUser = loggedInUserString ? JSON.parse(loggedInUserString) : null;
     
-    return users.filter(user => {
+    return users.filter((user: User) => {
       const matchesSearch = 
         user.userData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.userData.email.toLowerCase().includes(searchTerm.toLowerCase()) ||

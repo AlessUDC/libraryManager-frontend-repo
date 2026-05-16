@@ -19,6 +19,10 @@ export interface UserData {
     districtId: string;
     provinceId: string;
     title: string;
+    province?: {
+      provinceId: string;
+      title: string;
+    };
   };
   address?: {
     addressId: string;
@@ -40,6 +44,10 @@ export interface User {
       schoolId: string;
       facultyId: string;
       title: string;
+      faculty?: {
+        facultyId: string;
+        title: string;
+      };
     };
   };
   teacher?: {

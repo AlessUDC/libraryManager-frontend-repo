@@ -11,7 +11,7 @@ export default function NewPasswordView() {
   const token = location.state?.token || '';
   const email = location.state?.email || '';
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<{ password: string; passwordConfirmation: string; }>();
 
   const { mutate, isPending } = useMutation({
     mutationFn: resetPassword,
@@ -19,12 +19,12 @@ export default function NewPasswordView() {
       toast.success(data.message || 'Contraseña restablecida correctamente');
       navigate('/auth/login');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al restablecer la contraseña');
     }
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: { password: string; passwordConfirmation: string }) => {
     mutate({
       email,
       token,

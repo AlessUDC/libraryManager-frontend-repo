@@ -60,7 +60,7 @@ export const verifyResetToken = async ({ email, token }: { email: string, token:
   }
 };
 
-export const resetPassword = async (data: { email: string, token: string, password: any, passwordConfirmation: any }) => {
+export const resetPassword = async (data: { email: string, token: string, password: string, passwordConfirmation: string }) => {
   try {
     const response = await api.post('/auth/reset-password', data);
     return response.data;
@@ -69,7 +69,7 @@ export const resetPassword = async (data: { email: string, token: string, passwo
   }
 };
 
-export const loginUser = async (data: { code: string, password: any }) => {
+export const loginUser = async (data: { code: string, password: string }) => {
   try {
     const response = await api.post('/auth/login', data);
     return response.data;
@@ -87,7 +87,7 @@ export const getUserProfile = async () => {
   }
 };
 
-export const updateProfile = async (data: any) => {
+export const updateProfile = async (data: Record<string, string>) => {
   try {
     const response = await api.patch('/auth/profile', data);
     return response.data;
@@ -105,7 +105,7 @@ export const deleteAccount = async (password: string) => {
   }
 };
 
-export const activateAccount = async (data: { token: string, password: any, passwordConfirmation: any }) => {
+export const activateAccount = async (data: { token: string, password: string, passwordConfirmation: string }) => {
   try {
     const response = await api.post('/auth/activate-account', data);
     return response.data;

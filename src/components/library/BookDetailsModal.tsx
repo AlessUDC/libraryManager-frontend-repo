@@ -3,6 +3,8 @@ import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, BookOpenIcon, UserIcon, CalendarDaysIcon, GlobeAltIcon, IdentificationIcon, TagIcon } from '@heroicons/react/24/outline';
 import type { Book } from '../../types/library';
 
+import { useNavigate } from 'react-router-dom';
+
 type BookDetailsModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -10,7 +12,13 @@ type BookDetailsModalProps = {
 };
 
 export default function BookDetailsModal({ isOpen, onClose, book }: BookDetailsModalProps) {
+  const navigate = useNavigate();
   if (!book) return null;
+
+  const handleReserve = () => {
+    navigate(`/catalogue/${book.slug}/ejemplares`);
+    onClose();
+  };
 
   const isAvailable = (book.availableCopies || 0) > 0;
 
@@ -51,7 +59,7 @@ export default function BookDetailsModal({ isOpen, onClose, book }: BookDetailsM
                 <div className="flex flex-col md:flex-row gap-10">
                   {/* Book Cover Placeholder */}
                   <div className="w-full md:w-64 shrink-0">
-                    <div className="aspect-3/4 rounded-[2rem] bg-linear-to-br from-blue-600 to-indigo-900 flex items-center justify-center shadow-2xl shadow-blue-900/40 relative overflow-hidden group">
+                    <div className="aspect-3/4 rounded-4xl bg-linear-to-br from-blue-600 to-indigo-900 flex items-center justify-center shadow-2xl shadow-blue-900/40 relative overflow-hidden group">
                       <div className="absolute inset-0 bg-black/20" />
                       <span className="text-white/30 text-9xl font-black uppercase select-none group-hover:scale-110 transition-transform duration-700">
                         {book.title.charAt(0)}
@@ -125,6 +133,7 @@ export default function BookDetailsModal({ isOpen, onClose, book }: BookDetailsM
 
                     <div className="pt-6">
                       <button
+                        onClick={handleReserve}
                         disabled={!isAvailable}
                         className={`
                           w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-[0.98]

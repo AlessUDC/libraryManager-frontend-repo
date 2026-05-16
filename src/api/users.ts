@@ -13,9 +13,9 @@ const processError = (error: unknown) => {
     return new Error('Error de conexión con el servidor');
 };
 
-export const getUsers = async (query?: any) => {
+export const getUsers = async (query?: Record<string, string>) => {
     try {
-        const { data } = await api.get<any>('/users', { params: query });
+        const { data } = await api.get<{ users: User[] }>('/users', { params: query });
         return data;
     } catch (error) {
         throw processError(error);
@@ -40,7 +40,7 @@ export const getUserBySlug = async (slug: string) => {
     }
 };
 
-export const createUser = async (formData: any) => {
+export const createUser = async (formData: Record<string, unknown>) => {
     try {
         const { data } = await api.post('/users', formData);
         return data;
@@ -49,7 +49,7 @@ export const createUser = async (formData: any) => {
     }
 };
 
-export const updateUser = async ({ id, formData }: { id: string, formData: any }) => {
+export const updateUser = async ({ id, formData }: { id: string, formData: Record<string, unknown> }) => {
     try {
         const { data } = await api.patch(`/users/${id}`, formData);
         return data;

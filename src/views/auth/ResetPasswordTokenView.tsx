@@ -21,7 +21,7 @@ export default function ResetPasswordTokenView() {
       // Redirigir a la vista de nueva contraseña pasando el token y email
       navigate('/auth/new-password', { state: { token, email } });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Error al verificar el código');
     }
   });
