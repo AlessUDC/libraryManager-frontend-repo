@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyReservations, cancelReservation, redeemReservation } from '../../api/reservations';
 import { TicketIcon, CheckCircleIcon, TrashIcon, ExclamationCircleIcon, MagnifyingGlassIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import LibraryTable from '../../components/library/LibraryTable';
 import { toast } from 'react-toastify';
 import { isAxiosError } from 'axios';
@@ -9,14 +9,40 @@ import type { Reservation } from '../../api/reservations';
 
 export default function MyReservationsView() {
   const queryClient = useQueryClient();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ['my-reservations'],
     queryFn: getMyReservations,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.some((r) => r.status === 'PENDING')) return 10000;
+      return false;
+    },
   });
 
+  const hasClientExpired = useMemo(
+    () =>
+      reservations.some(
+        (r) => r.status === 'PENDING' && new Date(r.expiresAt) < now,
+      ),
+    [reservations, now],
+  );
+
+  useEffect(() => {
+    if (hasClientExpired) {
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    }
+  }, [hasClientExpired, queryClient]);
+
   const [tokens, setTokens] = useState<Record<string, string>>({});
-  
+
   const cancelMutation = useMutation({
     mutationFn: cancelReservation,
     onSuccess: () => {
@@ -43,6 +69,12 @@ export default function MyReservationsView() {
       toast.error(message || 'Error al validar el token');
     }
   });
+
+  const isExpiredPending = (res: Reservation) =>
+    res.status === 'PENDING' && new Date(res.expiresAt) < now;
+
+  const getEffectiveStatus = (res: Reservation): Reservation['status'] =>
+    isExpiredPending(res) ? 'EXPIRED' : res.status;
 
   const handleRedeem = (id: string) => {
     const token = tokens[id];
@@ -104,38 +136,47 @@ export default function MyReservationsView() {
     },
     {
       header: 'Expira / Entregado',
-      render: (res: Reservation) => (
-        <div className="text-[11px]">
-          {res.status === 'PENDING' ? (
-            <>
-              <p className="text-slate-400">Vence:</p>
-              <p className="font-bold text-amber-400">
-                {new Date(res.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </>
-          ) : res.status === 'FULFILLED' ? (
-            <p className="text-emerald-400 font-bold">Entregado</p>
-          ) : (
-             <p className="text-slate-600">-</p>
-          )}
-        </div>
-      )
+      render: (res: Reservation) => {
+        const effective = getEffectiveStatus(res);
+        return (
+          <div className="text-[11px]">
+            {effective === 'PENDING' ? (
+              <>
+                <p className="text-slate-400">Vence:</p>
+                <p className="font-bold text-amber-400">
+                  {new Date(res.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </p>
+              </>
+            ) : effective === 'FULFILLED' ? (
+              <p className="text-emerald-400 font-bold">Entregado</p>
+            ) : effective === 'EXPIRED' ? (
+              <p className="text-amber-400 font-bold">Expirado</p>
+            ) : (
+              <p className="text-slate-600">-</p>
+            )}
+          </div>
+        );
+      }
     },
     {
       header: 'Estado',
-      render: (res: Reservation) => (
-        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusStyle(res.status)}`}>
-          {getStatusLabel(res.status)}
-        </span>
-      )
+      render: (res: Reservation) => {
+        const effective = getEffectiveStatus(res);
+        return (
+          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusStyle(effective)}`}>
+            {getStatusLabel(effective)}
+          </span>
+        );
+      }
     }
   ];
 
   const stats = useMemo(() => {
-    const pending = reservations.filter(r => r.status === 'PENDING').length;
-    const fulfilled = reservations.filter(r => r.status === 'FULFILLED').length;
-    return { pending, fulfilled };
-  }, [reservations]);
+    const pending = reservations.filter((r) => getEffectiveStatus(r) === 'PENDING').length;
+    const fulfilled = reservations.filter((r) => getEffectiveStatus(r) === 'FULFILLED').length;
+    const expired = reservations.filter((r) => getEffectiveStatus(r) === 'EXPIRED').length;
+    return { pending, fulfilled, expired };
+  }, [reservations, now]);
 
   if (isLoading) {
     return (
@@ -161,7 +202,7 @@ export default function MyReservationsView() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-slate-900/50 border border-slate-800 rounded-4xl p-6 flex items-center gap-6 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
             <TicketIcon className="w-7 h-7" />
@@ -180,13 +221,22 @@ export default function MyReservationsView() {
             <p className="text-3xl font-black text-white">{stats.fulfilled}</p>
           </div>
         </div>
+        <div className="bg-slate-900/50 border border-slate-800 rounded-4xl p-6 flex items-center gap-6 shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
+            <ExclamationCircleIcon className="w-7 h-7" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Expiradas</p>
+            <p className="text-3xl font-black text-white">{stats.expired}</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
         <div className="flex items-center gap-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-3xl">
           <ExclamationCircleIcon className="w-8 h-8 text-blue-400 shrink-0" />
           <p className="text-sm text-slate-300 leading-relaxed">
-            <span className="font-bold text-white">¡Recordatorio importante!</span> Debes acudir a la biblioteca antes del tiempo de expiración para recoger tus libros reservados. Si no lo haces, la reserva se cancelará automáticamente.
+            <span className="font-bold text-white">¡Recordatorio importante!</span> Debes acudir a la biblioteca antes del tiempo de expiración para recoger tus libros reservados. Si no lo haces, la reserva se cancelará automáticamente y podrías recibir sanciones disciplinarias.
           </p>
         </div>
 
@@ -196,35 +246,39 @@ export default function MyReservationsView() {
           idExtractor={(res) => res.reservationId}
           emptyMessage="No tienes reservas registradas"
           emptyIcon={TicketIcon}
-          renderActions={(res) => res.status === 'PENDING' && (
-            <div className="flex items-center gap-3 justify-end">
-               <div className="relative w-32">
-                 <input 
-                   type="text" 
-                   maxLength={6}
-                   placeholder="Token 6-dig"
-                   value={tokens[res.reservationId] || ''}
-                   onChange={(e) => setTokens({...tokens, [res.reservationId]: e.target.value.replace(/\D/g, '')})}
-                   className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-3 text-center text-xs font-mono tracking-widest text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-                 />
-               </div>
-               <button 
-                 onClick={() => handleRedeem(res.reservationId)}
-                 disabled={redeemMutation.isPending}
-                 className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all shadow-lg shadow-emerald-900/20 active:scale-95 disabled:opacity-50"
-                 title="Canjear Reserva"
-               >
-                 <CheckIcon className="w-5 h-5" />
-               </button>
-               <button
-                onClick={() => handleCancel(res.reservationId)}
-                className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                title="Cancelar Reserva"
-              >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          renderActions={(res) => {
+            const effective = getEffectiveStatus(res);
+            if (effective !== 'PENDING') return null;
+            return (
+              <div className="flex items-center gap-3 justify-end">
+                <div className="relative w-32">
+                  <input 
+                    type="text" 
+                    maxLength={6}
+                    placeholder="Token 6-dig"
+                    value={tokens[res.reservationId] || ''}
+                    onChange={(e) => setTokens({...tokens, [res.reservationId]: e.target.value.replace(/\D/g, '')})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-3 text-center text-xs font-mono tracking-widest text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+                  />
+                </div>
+                <button 
+                  onClick={() => handleRedeem(res.reservationId)}
+                  disabled={redeemMutation.isPending}
+                  className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all shadow-lg shadow-emerald-900/20 active:scale-95 disabled:opacity-50"
+                  title="Canjear Reserva"
+                >
+                  <CheckIcon className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => handleCancel(res.reservationId)}
+                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
+                  title="Cancelar Reserva"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              </div>
+            );
+          }}
         />
       </div>
     </div>

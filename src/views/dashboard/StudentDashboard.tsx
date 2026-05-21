@@ -1,18 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { getMyLoans } from '../../api/loans';
+import { getUserProfile } from '../../api/auth';
 
 import { 
   BookOpenIcon, 
   SparklesIcon,
   ClockIcon,
   MagnifyingGlassIcon,
-  TicketIcon
+  TicketIcon,
+  ShieldExclamationIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
 
 export default function StudentDashboard() {
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: getUserProfile,
+  });
 
   const { data: loans = [], isLoading: isLoadingLoans } = useQuery({
     queryKey: ['my-loans', user?.userId],
@@ -20,9 +29,31 @@ export default function StudentDashboard() {
     enabled: !!user?.userId,
   });
 
-
-
   const activeLoans = loans.filter(l => l.status === 'ACTIVE');
+
+  const returnLevel = useMemo(() => {
+    const returnedCount = loans.filter((l) => l.status === 'RETURNED').length;
+    const onTime = profile?.student?.onTimeDeliveriesCount ?? 0;
+    if (returnedCount === 0) return 100;
+    return Math.min(100, Math.round((onTime / returnedCount) * 100));
+  }, [loans, profile?.student?.onTimeDeliveriesCount]);
+
+  const missedCount = profile?.student?.missedReservationsCount ?? 0;
+
+  const isBlocked =
+    (profile?.loanBlockUntil && new Date(profile.loanBlockUntil) > new Date()) ||
+    (profile?.systemBlockUntil && new Date(profile.systemBlockUntil) > new Date());
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   if (isLoadingLoans) return (
     <div className="flex justify-center items-center h-64">
@@ -46,6 +77,28 @@ export default function StudentDashboard() {
             <span>Explorar Libros</span>
         </Link>
       </div>
+
+      {missedCount === 1 && !isBlocked && (
+        <div className="flex items-center gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-3xl">
+          <ExclamationTriangleIcon className="w-8 h-8 text-amber-400 shrink-0" />
+          <p className="text-sm text-slate-300 leading-relaxed">
+            <span className="font-bold text-amber-300">Advertencia disciplinaria:</span> No recogiste una reserva a tiempo. Si acumulas más incumplimientos (3, 5 o 7), se aplicarán bloqueos temporales a préstamos y reservas.
+          </p>
+        </div>
+      )}
+
+      {isBlocked && (
+        <div className="flex items-center gap-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-3xl">
+          <ShieldExclamationIcon className="w-8 h-8 text-rose-400 shrink-0" />
+          <p className="text-sm text-slate-300 leading-relaxed">
+            <span className="font-bold text-rose-300">Cuenta bloqueada:</span> No puedes realizar nuevos préstamos ni reservas
+            {profile?.loanBlockUntil && new Date(profile.loanBlockUntil).getFullYear() !== 2099
+              ? ` hasta el ${formatDate(profile.loanBlockUntil)}`
+              : ''}
+            . Regulariza tu situación en la biblioteca.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
@@ -73,7 +126,6 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* Active Loans Preview */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
               <h2 className="text-xl font-black text-white uppercase tracking-wider flex items-center gap-3">
@@ -110,7 +162,6 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Right Sidebar Stats */}
         <div className="space-y-6">
             <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem] text-center">
                 <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20 mx-auto mb-4">
@@ -120,11 +171,25 @@ export default function StudentDashboard() {
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Libros en Posesión</p>
             </div>
 
+            <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem] text-center">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20 mx-auto mb-4">
+                    <ExclamationTriangleIcon className="w-8 h-8" />
+                </div>
+                <p className="text-3xl font-black text-amber-400">{missedCount}</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Veces Escapadas</p>
+            </div>
+
             <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem] text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-emerald-500 to-teal-500"></div>
-                <p className="text-3xl font-black text-emerald-400">100%</p>
+                <p className="text-3xl font-black text-emerald-400">{returnLevel}%</p>
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Nivel de Devolución</p>
-                <p className="text-[10px] text-slate-600 mt-4 leading-tight italic">¡Excelente! Siempre devuelves tus libros a tiempo.</p>
+                <p className="text-[10px] text-slate-600 mt-4 leading-tight italic">
+                  {returnLevel >= 80
+                    ? '¡Excelente! Sueles devolver tus libros a tiempo.'
+                    : returnLevel >= 50
+                      ? 'Buen progreso. Intenta devolver siempre a tiempo.'
+                      : 'Mejora tu puntualidad para evitar sanciones.'}
+                </p>
             </div>
         </div>
       </div>

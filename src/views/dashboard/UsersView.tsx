@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUsers, deleteUser, deleteMultipleUsers } from '../../api/users';
 import ErrorMessage from '../../components/ErrorMessage';
-import { UserPlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon, UserCircleIcon, IdentificationIcon, AcademicCapIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon, UserCircleIcon, IdentificationIcon, AcademicCapIcon, MapPinIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 import { useState, useMemo } from 'react';
+import UserLoansModal from '../../components/UserLoansModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import LibraryTable from '../../components/library/LibraryTable';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +20,7 @@ export default function UsersView() {
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+  const [loansModalUser, setLoansModalUser] = useState<User | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -185,6 +187,12 @@ export default function UsersView() {
         isLoading={deleteMutation.isPending}
       />
 
+      <UserLoansModal
+        isOpen={!!loansModalUser}
+        setIsOpen={(open) => { if (!open) setLoansModalUser(null); }}
+        user={loansModalUser}
+      />
+
       <ConfirmModal 
         isOpen={isBulkConfirmOpen}
         setIsOpen={setIsBulkConfirmOpen}
@@ -246,6 +254,13 @@ export default function UsersView() {
             idExtractor={(user) => user.userId}
             renderActions={(user) => (
               <div className="flex justify-end gap-2">
+                <button
+                  className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-all"
+                  title="Ver Préstamos"
+                  onClick={() => setLoansModalUser(user)}
+                >
+                  <BookOpenIcon className="w-5 h-5" />
+                </button>
                 <button 
                   className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
                   title="Editar"

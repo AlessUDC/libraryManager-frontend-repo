@@ -5,6 +5,7 @@ import { createReservation } from '../../api/reservations';
 import { toast } from 'react-toastify';
 import { isAxiosError } from 'axios';
 import { CalendarIcon, ClockIcon, HomeIcon, BuildingLibraryIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { formatLocalDateString, parseLocalDateString } from '../../utils/date';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -26,22 +27,20 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
   const getMaxDate = () => {
     const date = new Date();
     date.setDate(date.getDate() + maxLoanDays);
-    return date.toISOString().split('T')[0];
+    return formatLocalDateString(date);
   };
 
   useEffect(() => {
     if (isOpen && !showSuccess) {
       const now = new Date();
-      const localDateStr = now.toISOString().split('T')[0];
 
       if (loanType === 'LIBRARY') {
-        setDueDate(localDateStr);
+        setDueDate(formatLocalDateString(now));
       } else {
-        // Set default due date to 7 days from now, but capped by maxLoanDays
         const date = new Date();
         const defaultDays = Math.min(7, maxLoanDays);
         date.setDate(date.getDate() + defaultDays);
-        setDueDate(date.toISOString().split('T')[0]);
+        setDueDate(formatLocalDateString(date));
       }
       setDuration(maxReservationDuration);
     }
@@ -63,16 +62,19 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Parse dueDate as local time (YYYY-MM-DD + T00:00:00)
-    const [year, month, day] = dueDate.split('-').map(Number);
-    const finalDueDate = new Date(year, month - 1, day);
-    
-    if (loanType === 'LIBRARY') {
-      finalDueDate.setHours(19, 0, 0, 0); // Today at 7 PM
-    } else {
-      finalDueDate.setHours(23, 59, 59, 999); // End of day for home loans
-    }
+
+    const finalDueDate =
+      loanType === 'LIBRARY'
+        ? (() => {
+            const today = new Date();
+            today.setHours(19, 0, 0, 0);
+            return today;
+          })()
+        : (() => {
+            const date = parseLocalDateString(dueDate);
+            date.setHours(23, 59, 59, 999);
+            return date;
+          })();
 
     mutation.mutate({
       copyId,
@@ -173,7 +175,7 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
                           required
                           disabled={loanType === 'LIBRARY'}
                           value={dueDate}
-                          min={new Date().toISOString().split('T')[0]}
+                          min={formatLocalDateString(new Date())}
                           max={getMaxDate()}
                           onChange={(e) => setDueDate(e.target.value)}
                           className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"

@@ -10,7 +10,10 @@ export interface Loan {
   borrowDate: string;
   dueDate: string;
   returnDate: string | null;
+  type?: 'HOME' | 'LIBRARY';
   status: 'ACTIVE' | 'RETURNED' | 'OVERDUE';
+  depositAmount?: number | null;
+  depositStatus?: 'HELD' | 'REFUNDED' | 'FORFEITED' | null;
   copy: Copy;
   user?: User;
 }

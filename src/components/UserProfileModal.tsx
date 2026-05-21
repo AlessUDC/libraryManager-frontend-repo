@@ -137,6 +137,22 @@ export default function UserProfileModal({
                             <p className="text-white font-medium text-sm">{profile.student.school.title}</p>
                           </div>
                         )}
+                        {profile?.student && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 text-center">
+                              <p className="text-[10px] text-slate-500 uppercase font-bold mb-0.5">Entregas a Tiempo</p>
+                              <p className="text-emerald-400 font-black text-2xl">
+                                {profile.student.onTimeDeliveriesCount ?? 0}
+                              </p>
+                            </div>
+                            <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 text-center">
+                              <p className="text-[10px] text-slate-500 uppercase font-bold mb-0.5">Reservas Escapadas</p>
+                              <p className="text-amber-400 font-black text-2xl">
+                                {profile.student.missedReservationsCount ?? 0}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

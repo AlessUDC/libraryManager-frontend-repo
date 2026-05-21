@@ -37,9 +37,13 @@ export interface User {
   role: Role;
   isConfirmed: boolean;
   userData: UserData;
+  loanBlockUntil?: string | null;
+  systemBlockUntil?: string | null;
   student?: {
     schoolId: string;
     cycle: number;
+    onTimeDeliveriesCount?: number;
+    missedReservationsCount?: number;
     school: {
       schoolId: string;
       facultyId: string;

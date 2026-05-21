@@ -25,6 +25,9 @@ import NotFoundView from './views/NotFoundView';
 import AdminStatsView from './views/dashboard/AdminStatsView';
 import StudentDashboard from './views/dashboard/StudentDashboard';
 import TeacherDashboard from './views/dashboard/TeacherDashboard';
+import FinesAndAppealsView from './views/dashboard/FinesAndAppealsView';
+import ManageAppealsView from './views/dashboard/ManageAppealsView';
+import AuditLogsView from './views/dashboard/AuditLogsView';
 import DashboardLayout from './layouts/DashboardLayout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -100,6 +103,10 @@ function App() {
           <Route path="/reservations" element={<DashboardRoute allowedRoles={allRoles}><MyReservationsView /></DashboardRoute>} />
           <Route path="/manage-loans" element={<DashboardRoute allowedRoles={adminLibrarian}><LoansView /></DashboardRoute>} />
           
+          <Route path="/fines-appeals" element={<DashboardRoute allowedRoles={allRoles}><FinesAndAppealsView /></DashboardRoute>} />
+          <Route path="/manage-appeals" element={<DashboardRoute allowedRoles={adminLibrarian}><ManageAppealsView /></DashboardRoute>} />
+          <Route path="/audit-logs" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><AuditLogsView /></DashboardRoute>} />
+
           <Route path="/users" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><UsersView /></DashboardRoute>} />
           <Route path="/users/create" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><UserFormView /></DashboardRoute>} />
           <Route path="/users/:slug/edit" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><UserFormView /></DashboardRoute>} />
