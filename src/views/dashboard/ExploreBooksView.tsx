@@ -1,11 +1,34 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MagnifyingGlassIcon, UserIcon, AdjustmentsHorizontalIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon, BookmarkIcon } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { MagnifyingGlassIcon, UserIcon, AdjustmentsHorizontalIcon, CheckIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getBooks } from '../../api/books';
 import type { Book } from '../../types/library';
 import BookDetailsModal from '../../components/library/BookDetailsModal';
+import Pagination from '../../components/Pagination';
+import CategoryDetailsModal from '../../components/library/CategoryDetailsModal';
 
+
+// Static categories (example)
+const staticCategories = [
+  { name: 'Ficción', description: 'Narrativas imaginativas y creadas.' },
+  { name: 'Historia', description: 'Obras sobre hechos y periodos históricos.' },
+  { name: 'Ciencia', description: 'Libros de divulgación y textos académicos.' },
+  { name: 'Arte', description: 'Colección de libros visuales y críticos.' },
+  { name: 'Tecnología', description: 'Recursos sobre innovaciones y desarrollo.' },
+];
+
+const [selectedCategory, setSelectedCategory] = useState<{ name: string; description: string } | null>(null);
+const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+const openCategoryModal = (cat) => {
+  setSelectedCategory(cat);
+  setIsCategoryModalOpen(true);
+};
+
+const closeCategoryModal = () => {
+  setIsCategoryModalOpen(false);
+  setSelectedCategory(null);
+};
 
 type SearchType = 'title' | 'author' | 'category';
 
@@ -16,7 +39,7 @@ export default function ExploreBooksView() {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   // Modal State
@@ -56,15 +79,15 @@ export default function ExploreBooksView() {
       } else if (searchType === 'category') {
         allValues = books.flatMap(b => b.categories?.map(c => c.title) || []);
       }
-      
+
       const uniqueValues = Array.from(new Set(allValues));
-      const filtered = uniqueValues.filter(v => 
+      const filtered = uniqueValues.filter(v =>
         v.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      
+
       setSuggestions(filtered.slice(0, 5));
       setIsSuggesting(false);
-    }, 200); 
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [searchTerm, searchType, books]);
@@ -72,7 +95,7 @@ export default function ExploreBooksView() {
   const filteredBooks = useMemo(() => {
     return books.filter(book => {
       if (!book.activeState) return false;
-      
+
       const term = searchTerm.toLowerCase();
       if (searchType === 'title') return book.title.toLowerCase().includes(term);
       if (searchType === 'author') return book.authors?.some(a => a.name.toLowerCase().includes(term));
@@ -108,19 +131,59 @@ export default function ExploreBooksView() {
   };
 
   if (isLoading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    <div className="min-h-screen space-y-10 pb-20">
+      <div className="h-64 md:h-80 rounded-[3rem] bg-slate-900 border border-slate-800 animate-pulse"></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
+        {[...Array(10)].map((_, i) => (
+          <div key={i} className="aspect-3/4 bg-slate-900/50 border border-slate-800 rounded-[2.5rem] animate-pulse"></div>
+        ))}
+      </div>
     </div>
   );
 
   return (
     <div className="min-h-screen space-y-10 pb-20">
-      <BookDetailsModal 
+      <BookDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         book={selectedBook}
       />
 
+      {/* Category Carousels */}
+      <section className="space-y-12">
+        {staticCategories.map((cat, idx) => (
+          <div key={idx} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">{cat.name}</h2>
+              <button
+                onClick={() => openCategoryModal(cat)}
+                className="text-xs text-blue-400 hover:underline"
+              >
+                Ver más
+              </button>
+            </div>
+            <div className="flex overflow-x-auto gap-4 pb-2 hide-scrollbar">
+              {books.filter(b => b.categories?.some(c => c.title === cat.name)).slice(0, 8).map(book => (
+                <div key={book.bookId} className="min-w-[140px] bg-slate-800/40 p-3 rounded-xl hover:bg-slate-800 transition-colors">
+                  <img src={book.coverImage || '/placeholder.png'} alt={book.title} className="w-full h-40 object-cover rounded-md mb-2" />
+                  <p className="text-sm text-white truncate">{book.title}</p>
+                </div>
+              ))}
+              {/* Show placeholder if no books */}
+              {books.filter(b => b.categories?.some(c => c.title === cat.name)).length === 0 && (
+                <div className="min-w-[140px] flex items-center justify-center bg-slate-700/30 rounded-xl text-slate-500">
+                  No hay libros disponibles
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </section>
+      <CategoryDetailsModal
+        isOpen={isCategoryModalOpen}
+        onClose={closeCategoryModal}
+        category={selectedCategory}
+      />
       {/* Header & Search Section */}
       <section className="relative overflow-hidden rounded-[3rem] bg-linear-to-br from-blue-600 to-indigo-900 p-8 md:p-12 text-white shadow-2xl shadow-blue-900/40">
         <div className="relative z-10 space-y-8">
@@ -164,7 +227,7 @@ export default function ExploreBooksView() {
                     setShowSuggestions(true);
                   }}
                 />
-                
+
                 {isSuggesting && (
                   <div className="absolute right-6 top-1/2 -translate-y-1/2">
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/20 border-t-white"></div>
@@ -196,10 +259,44 @@ export default function ExploreBooksView() {
           </div>
         </div>
 
-        {/* Abstract shapes */}
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl" />
       </section>
+
+      {/* Featured Books Carousel (Simplified) */}
+      {!searchTerm && books.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-2xl font-black text-white flex items-center gap-2">
+              <span className="w-2 h-8 rounded-full bg-blue-500"></span>
+              Novedades Destacadas
+            </h2>
+          </div>
+          <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar">
+            {books.slice(0, 5).map(book => (
+              <div
+                key={book.bookId}
+                onClick={() => handleOpenDetails(book)}
+                className="snap-start shrink-0 w-80 h-48 bg-slate-900 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group cursor-pointer hover:border-blue-500/50 transition-all shadow-xl"
+              >
+                <div className={`absolute -right-10 -top-10 w-40 h-40 bg-linear-to-br ${getlinearForBook(book.bookId)} rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity`} />
+                <div className="relative z-10 flex flex-col h-full justify-between">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">Recomendado</span>
+                    <h3 className="text-lg font-black text-white line-clamp-2 leading-tight">{book.title}</h3>
+                  </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-xs text-slate-500 font-medium line-clamp-1">{book.authors?.map(a => a.name).join(', ') || 'Autor Desconocido'}</p>
+                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                      <ChevronRightIcon className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Books Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
@@ -207,9 +304,9 @@ export default function ExploreBooksView() {
           const isAvailable = (book.availableCopies || 0) > 0;
           const mainCategory = book.categories?.[0]?.title || 'General';
           const authorNames = book.authors?.map(a => a.name).join(', ') || 'Autor Desconocido';
-          
+
           return (
-            <div 
+            <div
               key={book.bookId}
               onClick={() => handleOpenDetails(book)}
               className="group relative bg-slate-900/40 backdrop-blur-sm border border-slate-800 rounded-[2.5rem] p-5 hover:border-blue-500/50 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-900/20 flex flex-col cursor-pointer"
@@ -220,19 +317,8 @@ export default function ExploreBooksView() {
                 <div className="text-white/30 text-8xl font-black uppercase select-none transform group-hover:scale-110 transition-transform duration-700">
                   {book.title.charAt(0)}
                 </div>
-                
-                <div className="absolute top-4 left-4">
-                   <div className="bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
-                    <BookmarkIcon className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="text-white text-[10px] font-black uppercase tracking-widest">{book.language || 'ES'}</span>
-                  </div>
-                </div>
 
-                <div className="absolute top-4 right-4 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1">
-                  <StarIconSolid className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-white text-xs font-black">4.8</span>
-                </div>
-                
+
                 {!isAvailable && (
                   <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px] bg-slate-950/40">
                     <span className="bg-red-500/90 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl border border-white/10">Agotado</span>
@@ -249,7 +335,7 @@ export default function ExploreBooksView() {
                     {book.availableCopies || 0} disponibles
                   </span>
                 </div>
-                
+
                 <div className="flex-1 min-h-14">
                   <h3 className="text-lg font-black text-white group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                     {book.title}
@@ -259,16 +345,16 @@ export default function ExploreBooksView() {
                     <span className="text-sm font-medium line-clamp-1 italic">{authorNames}</span>
                   </div>
                 </div>
-                
+
                 <div className="mt-6 pt-4 border-t border-slate-800/50 flex items-center justify-between">
-                   <div className="flex -space-x-2">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="w-6 h-6 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                           <div className={`w-full h-full bg-linear-to-br ${getlinearForBook(i.toString())} opacity-50`} />
-                        </div>
-                      ))}
-                   </div>
-                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">+12 lectores</span>
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-6 h-6 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center overflow-hidden">
+                        <div className={`w-full h-full bg-linear-to-br ${getlinearForBook(i.toString())} opacity-50`} />
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">+12 lectores</span>
                 </div>
               </div>
             </div>
@@ -290,20 +376,14 @@ export default function ExploreBooksView() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-12">
-          <button onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => Math.max(1, prev - 1)); }} disabled={currentPage === 1} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-            <ChevronLeftIcon className="w-6 h-6" />
-          </button>
-          <div className="flex gap-2">
-            {[...Array(totalPages)].map((_, i) => (
-              <button key={i} onClick={(e) => { e.stopPropagation(); setCurrentPage(i + 1); }} className={`w-14 h-14 rounded-2xl font-black transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-slate-900 text-slate-500 hover:text-white border border-slate-800'}`}>{i + 1}</button>
-            ))}
-          </div>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentPage(prev => Math.min(totalPages, prev + 1)); }} disabled={currentPage === totalPages} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-            <ChevronRightIcon className="w-6 h-6" />
-          </button>
+        <div className="mt-12">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
     </div>
-  );
+  )
 }

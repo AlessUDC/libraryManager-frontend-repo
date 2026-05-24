@@ -13,18 +13,19 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { Link } from 'react-router-dom';
+import { parseStoredUser, getStoredUserId } from '../../utils/auth';
 
 export default function TeacherDashboard() {
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
+  const user = parseStoredUser();
+  const userId = getStoredUserId(user);
 
   const {
     data: loans = [],
     isLoading: isLoadingLoans
   } = useQuery({
-    queryKey: ['my-loans', user?.userId],
-    queryFn: () => getMyLoans(user?.userId),
-    enabled: !!user?.userId
+    queryKey: ['my-loans', userId],
+    queryFn: () => getMyLoans(userId!),
+    enabled: !!userId
   });
 
   const {

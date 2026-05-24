@@ -11,6 +11,7 @@ import type { User } from '../../types/user';
 import { toast } from 'react-toastify';
 import Pagination from '../../components/Pagination';
 import BulkActionsBar from '../../components/library/BulkActionsBar';
+import { parseStoredUser, getStoredUserId } from '../../utils/auth';
 
 export default function UsersView() {
   const queryClient = useQueryClient();
@@ -84,8 +85,7 @@ export default function UsersView() {
   const filteredUsers = useMemo(() => {
     if (!usersData?.users) return [];
     const users = usersData.users;
-    const loggedInUserString = localStorage.getItem('user');
-    const loggedInUser = loggedInUserString ? JSON.parse(loggedInUserString) : null;
+    const loggedInUserId = getStoredUserId(parseStoredUser());
     
     return users.filter((user: User) => {
       const matchesSearch = 
@@ -93,7 +93,7 @@ export default function UsersView() {
         user.userData.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.userData?.documentNumber?.includes(searchTerm);
       
-      const isNotLoggedInUser = user.userId !== loggedInUser?.userId;
+      const isNotLoggedInUser = user.userId !== loggedInUserId;
       
       return matchesSearch && isNotLoggedInUser;
     });

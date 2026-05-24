@@ -1,18 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { getMyLoans } from '../../api/loans';
-import { BookOpenIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { useMemo } from 'react';
+import { BookOpenIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { useMemo, useState } from 'react';
 import type { Loan } from '../../api/loans';
+import { parseStoredUser, getStoredUserId } from '../../utils/auth';
 
 export default function MyLoansView() {
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
+  const user = parseStoredUser();
+  const userId = getStoredUserId(user);
 
-  const { data: loans = [], isLoading } = useQuery({
-    queryKey: ['my-loans', user?.userId],
-    queryFn: () => getMyLoans(user?.userId),
-    enabled: !!user?.userId,
+  const { data: loans = [], isLoading, isError } = useQuery({
+    queryKey: ['my-loans', userId],
+    queryFn: () => getMyLoans(userId!),
+    enabled: !!userId,
   });
+
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { activeLoans, overdueLoans, returnedLoans } = useMemo(() => {
     const active: Loan[] = [];
@@ -22,8 +25,16 @@ export default function MyLoansView() {
     const now = new Date();
 
     loans.forEach(loan => {
+      if (searchTerm) {
+        const title = loan.copy?.book?.title?.toLowerCase() || '';
+        const search = searchTerm.toLowerCase();
+        if (!title.includes(search)) return;
+      }
+
       if (loan.status === 'RETURNED') {
         returned.push(loan);
+      } else if (loan.status === 'OVERDUE') {
+        overdue.push(loan);
       } else {
         const dueDate = new Date(loan.dueDate);
         if (dueDate.getTime() < now.getTime()) {
@@ -35,7 +46,7 @@ export default function MyLoansView() {
     });
 
     return { activeLoans: active, overdueLoans: overdue, returnedLoans: returned };
-  }, [loans]);
+  }, [loans, searchTerm]);
 
   const getDaysRemaining = (dueDateStr: string) => {
     const due = new Date(dueDateStr);
@@ -43,6 +54,14 @@ export default function MyLoansView() {
     const diffTime = due.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
+
+  if (!userId) {
+    return (
+      <div className="p-12 text-center text-slate-400">
+        <p>No se pudo identificar tu sesión. Cierra sesión e inicia de nuevo.</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -52,12 +71,32 @@ export default function MyLoansView() {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="p-12 text-center text-red-400">
+        <p>No se pudieron cargar tus préstamos. Intenta recargar la página.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-black text-white">Mis Préstamos</h1>
-        <p className="text-slate-400 mt-1">Gestiona tus libros prestados y próximos a vencer</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-white">Mis Préstamos</h1>
+          <p className="text-slate-400 mt-1">Gestiona tus libros prestados y próximos a vencer</p>
+        </div>
+        <div className="relative w-full md:w-80">
+          <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Buscar por libro..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+          />
+        </div>
       </div>
 
       {/* Stats Dashboard */}
@@ -159,17 +198,22 @@ export default function MyLoansView() {
                     </div>
                   </div>
 
-                  <div className="mt-auto space-y-4">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500 font-medium">Vencimiento:</span>
-                      <span className={`font-black ${isOverdue ? 'text-red-400' : 'text-slate-300'}`}>
+                  <div className="mt-auto pt-4 border-t border-slate-800/50 space-y-3">
+                    <div className="flex justify-between items-center text-[10px] uppercase tracking-widest font-bold">
+                      <span className="text-slate-500">
+                        {new Date(loan.borrowDate).toLocaleDateString()}
+                      </span>
+                      <span className={`${isOverdue ? 'text-red-400 animate-pulse' : 'text-slate-400'}`}>
                         {new Date(loan.dueDate).toLocaleDateString()}
                       </span>
                     </div>
-                    
-                    <button className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition-all">
-                      Solicitar Prórroga
-                    </button>
+                    {/* Horizontal Timeline */}
+                    <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`absolute top-0 left-0 h-full ${isOverdue ? 'bg-red-500' : daysLeft <= 3 ? 'bg-amber-500' : 'bg-blue-500'} transition-all duration-1000`}
+                        style={{ width: `${isOverdue ? 100 : Math.max(5, Math.min(100, 100 - progressPercentage))}%` }}
+                      ></div>
+                    </div>
                   </div>
                 </div>
               );

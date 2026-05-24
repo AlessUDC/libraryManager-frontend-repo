@@ -8,9 +8,11 @@ import {
   UserIcon,
   ArrowPathIcon,
   TicketIcon,
+  CameraIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useMemo } from 'react';
 import LibraryTable from '../../components/library/LibraryTable';
+import BarcodeScanner from '../../components/library/BarcodeScanner';
 import { toast } from 'react-toastify';
 import type { Loan } from '../../api/loans';
 import type { Reservation } from '../../api/reservations';
@@ -26,6 +28,7 @@ export default function LoansView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [selectedLoanForReturn, setSelectedLoanForReturn] = useState<Loan | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const itemsPerPage = 10;
 
   const { data: loans = [], isLoading: isLoadingLoans } = useQuery({
@@ -238,6 +241,15 @@ export default function LoansView() {
         isLoading={returnMutation.isPending}
       />
 
+      <BarcodeScanner 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(text) => {
+          setSearchTerm(text);
+          setCurrentPage(1);
+        }}
+      />
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white">Gestión de Biblioteca</h1>
@@ -279,18 +291,27 @@ export default function LoansView() {
 
       <div className="space-y-6">
         <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative flex-1 w-full">
-            <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              placeholder={`Buscar en ${activeTab === 'LOANS' ? 'préstamos' : 'reservas'}...`}
-              className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
+          <div className="relative flex-1 w-full flex items-center gap-2">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                placeholder={`Buscar en ${activeTab === 'LOANS' ? 'préstamos' : 'reservas'} (código, nombre)...`}
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all active:scale-95"
+              title="Escanear Código"
+            >
+              <CameraIcon className="w-5 h-5" />
+            </button>
           </div>
 
           {activeTab === 'LOANS' && (

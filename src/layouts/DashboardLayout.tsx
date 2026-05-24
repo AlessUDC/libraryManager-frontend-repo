@@ -3,7 +3,9 @@ import { getUserProfile } from '../api/auth';
 import UserProfileModal from '../components/UserProfileModal';
 import Sidebar from '../components/Sidebar';
 import ChangeCredentialsModal from '../components/ChangeCredentialsModal';
+import DigitalLibraryCard from '../components/library/DigitalLibraryCard';
 import MenuIcon from '../assets/svg/Menu'
+import { IdentificationIcon } from '@heroicons/react/24/outline';
 import UserIcon from '../assets/svg/User'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, type ReactNode } from 'react';
@@ -22,6 +24,17 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
 
   const isProfileOpen = searchParams.get('view-profile') === 'true';
   const isCredentialsOpen = searchParams.get('edit-profile') === 'true';
+  const isLibraryCardOpen = searchParams.get('library-card') === 'true';
+
+  const setIsLibraryCardOpen = (open: boolean) => {
+    const params = new URLSearchParams(searchParams);
+    if (open) {
+      params.set('library-card', 'true');
+    } else {
+      params.delete('library-card');
+    }
+    setSearchParams(params);
+  };
 
   const setIsProfileOpen = (open: boolean | ((prev: boolean) => boolean)) => {
     const value = typeof open === 'function' ? open(isProfileOpen) : open;
@@ -50,7 +63,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: getUserProfile,
-    enabled: isProfileOpen || isCredentialsOpen,
+    enabled: isProfileOpen || isCredentialsOpen || isLibraryCardOpen,
   });
 
   const handleLogout = () => {
@@ -64,14 +77,14 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
     <div className="min-h-screen bg-[#0F1523] text-slate-200 flex">
       {/* Overlay for mobile */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Modal Perfil Usuario*/}
-      <UserProfileModal 
+      <UserProfileModal
         isOpen={isProfileOpen}
         setIsOpen={setIsProfileOpen}
         setIsCredentialsOpen={setIsCredentialsOpen}
@@ -79,16 +92,24 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
         isLoading={isLoading}
         role={role}
       />
- 
+
       {/* Change Credentials Modal */}
-      <ChangeCredentialsModal 
+      <ChangeCredentialsModal
         isOpen={isCredentialsOpen}
         setIsOpen={setIsCredentialsOpen}
         profile={profile}
       />
 
+      {/* Digital Library Card */}
+      <DigitalLibraryCard
+        isOpen={isLibraryCardOpen}
+        onClose={() => setIsLibraryCardOpen(false)}
+        user={JSON.parse(localStorage.getItem('user') || '{}')}
+        profile={profile}
+      />
+
       {/* Sidebar */}
-      <Sidebar 
+      <Sidebar
         isSidebarOpen={isSidebarOpen}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
@@ -100,18 +121,18 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
         <header className="md:hidden bg-slate-900/90 backdrop-blur-md border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-30">
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(true)}
             className="p-2 text-slate-400 hover:text-white"
           >
             <MenuIcon className="w-6 h-6" />
           </button>
-          
+
           <h1 className="text-xl font-black text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-indigo-400">
             LibManager
           </h1>
-          
-          <button 
+
+          <button
             onClick={() => setIsProfileOpen(true)}
             className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-500 border border-slate-700 shadow-sm"
           />
@@ -123,7 +144,15 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
             <h2 className="text-xl font-bold text-white">Panel de Control</h2>
           </div>
           <div className="flex items-center space-x-6">
-            <div 
+            <button
+              onClick={() => setIsLibraryCardOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all active:scale-95 shadow-sm"
+              title="Carné Digital"
+            >
+              <IdentificationIcon className="w-5 h-5 text-blue-400" />
+              <span className="text-xs font-bold uppercase tracking-wider hidden lg:block">Carné Digital</span>
+            </button>
+            <div
               onClick={() => setIsProfileOpen(true)}
               className="flex items-center space-x-3 border-r border-slate-800 pr-6 cursor-pointer group"
             >

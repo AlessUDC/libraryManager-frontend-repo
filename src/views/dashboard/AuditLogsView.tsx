@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs } from '../../api/audit';
 import type { AuditLog } from '../../api/audit';
@@ -168,80 +168,68 @@ export default function AuditLogsView() {
           <p className="text-slate-500 italic font-medium">No se encontraron registros de auditoría.</p>
         </div>
       ) : (
-        <div className="bg-slate-900/20 border border-slate-850 rounded-[2.5rem] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/40 text-[10px] font-black text-slate-450 uppercase tracking-widest">
-                  <th className="py-4 px-6">Acción</th>
-                  <th className="py-4 px-6">Entidad</th>
-                  <th className="py-4 px-6">ID de Entidad</th>
-                  <th className="py-4 px-6">Ejecutado Por</th>
-                  <th className="py-4 px-6">Fecha y Hora</th>
-                  <th className="py-4 px-6 text-right">Detalles</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-850/60">
-                {filteredLogs.map((log: AuditLog) => {
-                  const isExpanded = expandedLogId === log.auditLogId;
+        <div className="relative border-l-2 border-slate-800/80 ml-4 md:ml-8 space-y-12 pb-10 pt-4">
+          {filteredLogs.map((log: AuditLog) => {
+            const isExpanded = expandedLogId === log.auditLogId;
 
-                  return (
-                    <Fragment key={log.auditLogId}>
-                      {/* Standard row */}
-                      <tr className="hover:bg-slate-900/20 transition-all text-xs font-semibold text-slate-350 align-middle">
-                        <td className="py-4 px-6 shrink-0">
-                          <span className={`px-3 py-1.5 rounded-2xl border text-[10px] font-black uppercase tracking-wider ${getActionStyle(log.action)}`}>
-                            {log.action}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 font-bold text-white uppercase">{log.entity}</td>
-                        <td className="py-4 px-6 text-slate-500 font-mono text-[10px]">{log.entityId || '—'}</td>
-                        <td className="py-4 px-6 text-slate-400 font-mono text-[10px]">{log.performedBy}</td>
-                        <td className="py-4 px-6 text-slate-450">{formatDate(log.createdAt)}</td>
-                        <td className="py-4 px-6 text-right">
-                          <button
-                            onClick={() => toggleExpandLog(log.auditLogId)}
-                            className="bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white p-2 rounded-xl transition-all active:scale-95 inline-flex items-center gap-1.5 border border-slate-800"
-                          >
-                            {isExpanded ? (
-                              <>
-                                <ChevronUpIcon className="w-4 h-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-1">Ocultar</span>
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDownIcon className="w-4 h-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-1">Expandir</span>
-                              </>
-                            )}
-                          </button>
-                        </td>
-                      </tr>
+            // Extract the background color from the action style to use for the dot
+            const bgClass = getActionStyle(log.action).split(' ').find(c => c.startsWith('bg-'))?.replace('/10', '') || 'bg-slate-500';
 
-                      {/* Expandable details row */}
-                      {isExpanded && (
-                        <tr className="bg-slate-950/45 text-xs">
-                          <td colSpan={6} className="py-5 px-8 border-y border-slate-800/80">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <SparklesIcon className="w-4 h-4 text-blue-400" />
-                                <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                  Carga de Datos Completa (JSON Payload):
-                                </span>
-                              </div>
-                              <pre className="bg-slate-950 border border-slate-850/80 p-5 rounded-2xl text-blue-300 font-mono text-xs overflow-x-auto leading-relaxed shadow-inner max-w-full">
-                                {formatJson(log.details)}
-                              </pre>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            return (
+              <div key={log.auditLogId} className="relative pl-8 md:pl-12 group">
+                {/* Timeline dot */}
+                <div className={`absolute -left-[11px] top-4 w-5 h-5 rounded-full border-4 border-[#0F1523] ${bgClass} shadow-lg ring-2 ring-transparent group-hover:ring-blue-500/20 transition-all`}></div>
+
+                <div className="bg-slate-900/40 backdrop-blur-sm border border-slate-800 rounded-[2rem] p-6 hover:border-slate-700 transition-all shadow-xl">
+                  <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center mb-4">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span className={`px-3 py-1.5 rounded-2xl border text-[10px] font-black uppercase tracking-wider ${getActionStyle(log.action)}`}>
+                        {log.action}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                        <span className="text-sm font-black text-white uppercase tracking-wide">{log.entity}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-slate-500 bg-slate-950/50 px-3 py-1 rounded-full border border-slate-800">
+                      {formatDate(log.createdAt)}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-end mt-6">
+                    <p className="text-xs font-medium text-slate-400">
+                      <strong className="text-slate-300 font-bold uppercase tracking-widest text-[10px] block mb-1">Responsable:</strong>
+                      <span className="bg-slate-800/50 px-3 py-1 rounded-lg border border-slate-700/50 inline-block">{log.performedBy}</span>
+                    </p>
+                    <button
+                      onClick={() => toggleExpandLog(log.auditLogId)}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-4 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-2 border border-slate-700 shadow-sm"
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        {isExpanded ? 'Cerrar' : 'Detalles'}
+                      </span>
+                      {isExpanded ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Expandable details row */}
+                  {isExpanded && (
+                    <div className="mt-6 pt-6 border-t border-slate-800/80 space-y-4 animate-in fade-in zoom-in-95 duration-300 origin-top">
+                      <div className="flex items-center gap-2">
+                        <SparklesIcon className="w-5 h-5 text-blue-400" />
+                        <span className="text-xs font-black text-white uppercase tracking-widest">
+                          Payload JSON:
+                        </span>
+                      </div>
+                      <pre className="bg-[#0a0e17] border border-slate-800/50 p-6 rounded-3xl text-blue-300 font-mono text-xs overflow-x-auto leading-relaxed shadow-inner w-full">
+                        {formatJson(log.details)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

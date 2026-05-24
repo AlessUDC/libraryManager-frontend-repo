@@ -6,6 +6,11 @@ import { toast } from 'react-toastify';
 import { isAxiosError } from 'axios';
 import { CalendarIcon, ClockIcon, HomeIcon, BuildingLibraryIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { formatLocalDateString, parseLocalDateString } from '../../utils/date';
+import {
+  canSelectLibraryLoan,
+  isAfterLibraryClosing,
+  libraryClosingMessage,
+} from '../../utils/library-hours';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -21,8 +26,10 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
   const [dueDate, setDueDate] = useState('');
   const [duration, setDuration] = useState(60);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const maxReservationDuration = userRole.toUpperCase() === 'TEACHER' ? 120 : 60;
   const maxLoanDays = 5;
+  const libraryLoanAllowed = canSelectLibraryLoan(now);
 
   const getMaxDate = () => {
     const date = new Date();
@@ -31,12 +38,24 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
   };
 
   useEffect(() => {
-    if (isOpen && !showSuccess) {
-      const now = new Date();
+    if (!isOpen) return;
+    const tick = () => setNow(new Date());
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [isOpen]);
 
-      if (loanType === 'LIBRARY') {
-        setDueDate(formatLocalDateString(now));
-      } else {
+  useEffect(() => {
+    if (isOpen && !showSuccess) {
+      const current = new Date();
+
+      if (loanType === 'LIBRARY' && !canSelectLibraryLoan(current)) {
+        setLoanType('HOME');
+      }
+
+      if (loanType === 'LIBRARY' && canSelectLibraryLoan(current)) {
+        setDueDate(formatLocalDateString(current));
+      } else if (loanType === 'HOME') {
         const date = new Date();
         const defaultDays = Math.min(7, maxLoanDays);
         date.setDate(date.getDate() + defaultDays);
@@ -62,6 +81,11 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (loanType === 'LIBRARY' && !canSelectLibraryLoan(new Date())) {
+      toast.warning(libraryClosingMessage());
+      return;
+    }
 
     const finalDueDate =
       loanType === 'LIBRARY'
@@ -151,17 +175,31 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
                           </button>
                           <button
                             type="button"
-                            onClick={() => setLoanType('LIBRARY')}
+                            disabled={!libraryLoanAllowed}
+                            onClick={() => libraryLoanAllowed && setLoanType('LIBRARY')}
+                            title={!libraryLoanAllowed ? libraryClosingMessage() : undefined}
                             className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                              loanType === 'LIBRARY' 
-                                ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400' 
-                                : 'bg-slate-800/50 border-transparent text-slate-500 hover:bg-slate-800'
+                              !libraryLoanAllowed
+                                ? 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                                : loanType === 'LIBRARY'
+                                  ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400'
+                                  : 'bg-slate-800/50 border-transparent text-slate-500 hover:bg-slate-800'
                             }`}
                           >
                             <BuildingLibraryIcon className="w-6 h-6" />
                             <span className="text-xs font-bold">En Sala</span>
                           </button>
                         </div>
+                        {!libraryLoanAllowed && (
+                          <p className="text-[10px] text-amber-400 font-bold">
+                            {libraryClosingMessage()}
+                            {isAfterLibraryClosing(now) && (
+                              <span className="block text-slate-500 mt-0.5 font-medium">
+                                Hora actual: {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </p>
+                        )}
                       </div>
 
                       {/* Due Date */}
@@ -216,8 +254,8 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
 
                       <button
                         type="submit"
-                        disabled={mutation.isPending}
-                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                        disabled={mutation.isPending || (loanType === 'LIBRARY' && !libraryLoanAllowed)}
+                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center justify-center gap-3"
                       >
                         {mutation.isPending ? (
                           <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyReservations, cancelReservation, redeemReservation } from '../../api/reservations';
-import { TicketIcon, CheckCircleIcon, TrashIcon, ExclamationCircleIcon, MagnifyingGlassIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { TicketIcon, CheckCircleIcon, TrashIcon, ExclamationCircleIcon, MagnifyingGlassIcon, CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useState, useMemo, useEffect } from 'react';
 import LibraryTable from '../../components/library/LibraryTable';
 import { toast } from 'react-toastify';
@@ -15,6 +15,8 @@ export default function MyReservationsView() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ['my-reservations'],
@@ -193,13 +195,25 @@ export default function MyReservationsView() {
           <h1 className="text-3xl font-black text-white">Mis Reservas</h1>
           <p className="text-slate-400 mt-1">Sigue el estado de tus reservas y entregas</p>
         </div>
-        <button 
-          onClick={() => window.location.href = '/explore'}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 whitespace-nowrap"
-        >
-          <MagnifyingGlassIcon className="w-5 h-5" />
-          Reservar Nuevo Libro
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar por libro..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+            />
+          </div>
+          <button 
+            onClick={() => window.location.href = '/explore'}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 whitespace-nowrap"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Reservar Nuevo Libro
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -241,7 +255,11 @@ export default function MyReservationsView() {
         </div>
 
         <LibraryTable 
-          data={reservations}
+          data={reservations.filter(res => {
+            if (!searchTerm) return true;
+            const search = searchTerm.toLowerCase();
+            return res.copy?.book?.title?.toLowerCase().includes(search) || res.copy?.barcode?.toLowerCase().includes(search);
+          })}
           columns={columns}
           idExtractor={(res) => res.reservationId}
           emptyMessage="No tienes reservas registradas"

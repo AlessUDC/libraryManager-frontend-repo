@@ -30,6 +30,7 @@ import ManageAppealsView from './views/dashboard/ManageAppealsView';
 import AuditLogsView from './views/dashboard/AuditLogsView';
 import DashboardLayout from './layouts/DashboardLayout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { parseStoredUser } from './utils/auth';
 
 const queryClient = new QueryClient();
 
@@ -41,8 +42,7 @@ interface DashboardRouteProps {
 
 const DashboardRoute = ({ children, allowedRoles }: DashboardRouteProps) => {
   const token = localStorage.getItem('token');
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
+  const user = parseStoredUser();
   
   if (!token || token === 'undefined') {
     return <Navigate to="/auth/login" replace />;
@@ -62,8 +62,7 @@ function App() {
   const allRoles = ['STUDENT', 'TEACHER', 'LIBRARIAN', 'ADMINISTRATOR'];
 
   const DashboardSwitcher = () => {
-    const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : null;
+    const user = parseStoredUser();
     const role = (user?.role || 'STUDENT').toUpperCase();
 
     if (role === 'ADMINISTRATOR' || role === 'LIBRARIAN') return <AdminStatsView />;

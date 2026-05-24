@@ -13,10 +13,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
+import { parseStoredUser, getStoredUserId } from '../../utils/auth';
 
 export default function StudentDashboard() {
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
+  const user = parseStoredUser();
+  const userId = getStoredUserId(user);
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -24,9 +25,9 @@ export default function StudentDashboard() {
   });
 
   const { data: loans = [], isLoading: isLoadingLoans } = useQuery({
-    queryKey: ['my-loans', user?.userId],
-    queryFn: () => getMyLoans(user?.userId),
-    enabled: !!user?.userId,
+    queryKey: ['my-loans', userId],
+    queryFn: () => getMyLoans(userId!),
+    enabled: !!userId,
   });
 
   const activeLoans = loans.filter(l => l.status === 'ACTIVE');
@@ -65,7 +66,7 @@ export default function StudentDashboard() {
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tight">¡Hola, {user?.userData?.name.split(' ')[0]}! 👋</h1>
+          <h1 className="text-4xl font-black text-white tracking-tight">¡Hola, {(user?.name ?? user?.userData?.name ?? 'Lector').split(' ')[0]}! 👋</h1>
           <p className="text-slate-400 mt-2 font-medium">¿Qué aventura literaria iniciaremos hoy?</p>
         </div>
         

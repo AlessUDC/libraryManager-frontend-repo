@@ -29,6 +29,7 @@ export interface Book {
   language?: string;
   description?: string;
   activeState: boolean;
+  coverImage?: string;
   categories?: Category[];
   authors?: Author[];
   totalCopies?: number;

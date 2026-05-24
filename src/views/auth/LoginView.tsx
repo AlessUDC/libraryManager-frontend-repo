@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import AuthLayout from '../../layouts/AuthLayout';
 import { loginUser } from '../../api/auth';
+import { saveStoredUser } from '../../utils/auth';
 import ErrorMessage from '../../components/ErrorMessage';
 
 export default function LoginView() {
@@ -15,7 +16,7 @@ export default function LoginView() {
     onSuccess: (data) => {
       // Guardar token y usuario
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      saveStoredUser(data.user);
       toast.success(data.message || 'Inicio de sesión exitoso');
       const userRole = (data.user.role || '').toUpperCase();
       const adminLibrarian = ['ADMINISTRATOR', 'LIBRARIAN'];
