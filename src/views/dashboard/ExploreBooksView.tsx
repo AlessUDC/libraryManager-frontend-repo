@@ -17,18 +17,6 @@ const staticCategories = [
   { name: 'Tecnología', description: 'Recursos sobre innovaciones y desarrollo.' },
 ];
 
-const [selectedCategory, setSelectedCategory] = useState<{ name: string; description: string } | null>(null);
-const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-
-const openCategoryModal = (cat) => {
-  setSelectedCategory(cat);
-  setIsCategoryModalOpen(true);
-};
-
-const closeCategoryModal = () => {
-  setIsCategoryModalOpen(false);
-  setSelectedCategory(null);
-};
 
 type SearchType = 'title' | 'author' | 'category';
 
@@ -45,6 +33,19 @@ export default function ExploreBooksView() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  // Category Modal State
+  const [selectedCategory, setSelectedCategory] = useState<{ name: string; description: string } | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+  const openCategoryModal = (cat: { name: string; description: string }) => {
+    setSelectedCategory(cat);
+    setIsCategoryModalOpen(true);
+  };
+
+  const closeCategoryModal = () => {
+    setIsCategoryModalOpen(false);
+    setSelectedCategory(null);
+  };
 
   const { data: books = [], isLoading } = useQuery({
     queryKey: ['books'],
