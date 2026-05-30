@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, deleteUser, deleteMultipleUsers } from '../../api/users';
+import { getUsers, deleteUser, deleteMultipleUsers, updateUser } from '../../api/users';
 import ErrorMessage from '../../components/ErrorMessage';
-import { UserPlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon, UserCircleIcon, IdentificationIcon, AcademicCapIcon, MapPinIcon, BookOpenIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon, UserCircleIcon, IdentificationIcon, AcademicCapIcon, MapPinIcon, BookOpenIcon, PowerIcon } from '@heroicons/react/24/outline';
 import { useState, useMemo } from 'react';
 import UserLoansModal from '../../components/UserLoansModal';
-import ConfirmModal from '../../components/ConfirmModal';
+import PasswordConfirmModal from '../../components/PasswordConfirmModal';
 import LibraryTable from '../../components/library/LibraryTable';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../../types/user';
@@ -33,7 +33,7 @@ export default function UsersView() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteUser,
+    mutationFn: ({ id, password }: { id: string; password?: string }) => deleteUser(id, password),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('Usuario eliminado');
@@ -46,12 +46,24 @@ export default function UsersView() {
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: deleteMultipleUsers,
+    mutationFn: ({ ids, password }: { ids: string[]; password?: string }) => deleteMultipleUsers({ ids, password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success(`${selectedIds.length} usuarios eliminados`);
       setIsBulkConfirmOpen(false);
       setSelectedIds([]);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      updateUser({ id, formData: { activeState: active } }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(data.userData.activeState ? 'Cuenta activada exitosamente' : 'Cuenta desactivada exitosamente');
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -71,14 +83,14 @@ export default function UsersView() {
     setIsConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = (password: string) => {
     if (deletingId) {
-      deleteMutation.mutate(deletingId);
+      deleteMutation.mutate({ id: deletingId, password });
     }
   };
 
-  const handleConfirmBulkDelete = () => {
-    bulkDeleteMutation.mutate(selectedIds);
+  const handleConfirmBulkDelete = (password: string) => {
+    bulkDeleteMutation.mutate({ ids: selectedIds, password });
   };
 
   // Filter out the current logged-in user from the list
@@ -86,15 +98,15 @@ export default function UsersView() {
     if (!usersData?.users) return [];
     const users = usersData.users;
     const loggedInUserId = getStoredUserId(parseStoredUser());
-    
+
     return users.filter((user: User) => {
-      const matchesSearch = 
+      const matchesSearch =
         user.userData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.userData.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.userData?.documentNumber?.includes(searchTerm);
-      
+
       const isNotLoggedInUser = user.userId !== loggedInUserId;
-      
+
       return matchesSearch && isNotLoggedInUser;
     });
   }, [usersData, searchTerm]);
@@ -148,28 +160,27 @@ export default function UsersView() {
       )
     },
     {
-        header: 'Académico',
-        render: (user: User) => (
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-              <AcademicCapIcon className="w-3 h-3 text-slate-600" />
-              {user.student?.school?.title || user.teacher?.faculty?.title || 'N/A'}
-            </div>
-            <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
-              <MapPinIcon className="w-3 h-3 text-slate-600" />
-              {user.userData?.district?.title || 'N/A'}
-            </div>
+      header: 'Académico',
+      render: (user: User) => (
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+            <AcademicCapIcon className="w-3 h-3 text-slate-600" />
+            {user.student?.school?.title || user.teacher?.faculty?.title || 'N/A'}
           </div>
-        )
-      },
+          <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+            <MapPinIcon className="w-3 h-3 text-slate-600" />
+            {user.userData?.district?.title || 'N/A'}
+          </div>
+        </div>
+      )
+    },
     {
       header: 'Estado',
       render: (user: User) => (
-        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-          user.userData?.activeState 
-            ? 'bg-green-500/10 text-green-400 border-green-500/20' 
-            : 'bg-red-500/10 text-red-400 border-red-500/20'
-        }`}>
+        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${user.userData?.activeState
+          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+          : 'bg-red-500/10 text-red-400 border-red-500/20'
+          }`}>
           {user.userData?.activeState ? 'ACTIVO' : 'INACTIVO'}
         </span>
       )
@@ -178,11 +189,11 @@ export default function UsersView() {
 
   return (
     <div className="space-y-8">
-      <ConfirmModal 
+      <PasswordConfirmModal
         isOpen={isConfirmOpen}
         setIsOpen={setIsConfirmOpen}
-        title="¿Eliminar Usuario?"
-        description="Esta acción eliminará al usuario y todos sus datos asociados de forma permanente."
+        title="¿Desactivar y Eliminar Usuario?"
+        description="Esta acción marcará al usuario como eliminado y desactivará su cuenta. Su historial de préstamos y datos se conservarán por seguridad."
         onConfirm={handleConfirmDelete}
         isLoading={deleteMutation.isPending}
       />
@@ -193,11 +204,11 @@ export default function UsersView() {
         user={loansModalUser}
       />
 
-      <ConfirmModal 
+      <PasswordConfirmModal
         isOpen={isBulkConfirmOpen}
         setIsOpen={setIsBulkConfirmOpen}
         title="¿Eliminar Usuarios Seleccionados?"
-        description={`Esta acción eliminará ${selectedIds.length} usuarios de forma permanente. No se podrán recuperar sus datos.`}
+        description={`Esta acción eliminará ${selectedIds.length} usuarios. Deberás ingresar tu contraseña de administrador para continuar.`}
         onConfirm={handleConfirmBulkDelete}
         isLoading={bulkDeleteMutation.isPending}
       />
@@ -209,7 +220,7 @@ export default function UsersView() {
         </div>
 
         <div className="flex items-center gap-4">
-          <BulkActionsBar 
+          <BulkActionsBar
             selectedCount={selectedIds.length}
             onDelete={() => setIsBulkConfirmOpen(true)}
             onClearSelection={() => setSelectedIds([])}
@@ -255,21 +266,32 @@ export default function UsersView() {
             renderActions={(user) => (
               <div className="flex justify-end gap-2">
                 <button
+                  className={`p-2 rounded-lg transition-all ${user.userData.activeState
+                    ? 'text-slate-400 hover:text-amber-500 hover:bg-amber-500/10'
+                    : 'text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10'
+                    }`}
+                  title={user.userData.activeState ? 'Desactivar Cuenta' : 'Activar Cuenta'}
+                  onClick={() => toggleActiveMutation.mutate({ id: user.userId, active: !user.userData.activeState })}
+                  disabled={toggleActiveMutation.isPending}
+                >
+                  <PowerIcon className="w-5 h-5" />
+                </button>
+                <button
                   className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-all"
                   title="Ver Préstamos"
                   onClick={() => setLoansModalUser(user)}
                 >
                   <BookOpenIcon className="w-5 h-5" />
                 </button>
-                <button 
-                  className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
+                <button
+                  className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
                   title="Editar"
                   onClick={() => handleEdit(user.slug || user.userId)}
                 >
                   <PencilSquareIcon className="w-5 h-5" />
                 </button>
-                <button 
-                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
+                <button
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                   title="Eliminar"
                   onClick={() => handleDeleteClick(user.userId)}
                 >
@@ -279,7 +301,7 @@ export default function UsersView() {
             )}
           />
 
-          <Pagination 
+          <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}

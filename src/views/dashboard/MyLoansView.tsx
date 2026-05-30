@@ -4,10 +4,14 @@ import { BookOpenIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, Magn
 import { useMemo, useState } from 'react';
 import type { Loan } from '../../api/loans';
 import { parseStoredUser, getStoredUserId } from '../../utils/auth';
+import LoanDetailModal from '../../components/library/LoanDetailModal';
+import Pagination from '../../components/Pagination';
 
 export default function MyLoansView() {
   const user = parseStoredUser();
   const userId = getStoredUserId(user);
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const { data: loans = [], isLoading, isError } = useQuery({
     queryKey: ['my-loans', userId],
@@ -16,6 +20,9 @@ export default function MyLoansView() {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'OVERDUE' | 'RETURNED'>('ALL');
 
   const { activeLoans, overdueLoans, returnedLoans } = useMemo(() => {
     const active: Loan[] = [];
@@ -32,21 +39,35 @@ export default function MyLoansView() {
       }
 
       if (loan.status === 'RETURNED') {
-        returned.push(loan);
+        if (statusFilter === 'ALL' || statusFilter === 'RETURNED') {
+          returned.push(loan);
+        }
       } else if (loan.status === 'OVERDUE') {
-        overdue.push(loan);
+        if (statusFilter === 'ALL' || statusFilter === 'OVERDUE') {
+          overdue.push(loan);
+        }
       } else {
         const dueDate = new Date(loan.dueDate);
         if (dueDate.getTime() < now.getTime()) {
-          overdue.push(loan);
+          if (statusFilter === 'ALL' || statusFilter === 'OVERDUE') {
+            overdue.push(loan);
+          }
         } else {
-          active.push(loan);
+          if (statusFilter === 'ALL' || statusFilter === 'ACTIVE') {
+            active.push(loan);
+          }
         }
       }
     });
 
     return { activeLoans: active, overdueLoans: overdue, returnedLoans: returned };
-  }, [loans, searchTerm]);
+  }, [loans, searchTerm, statusFilter]);
+
+  const totalPages = Math.ceil(returnedLoans.length / itemsPerPage);
+  const paginatedReturnedLoans = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return returnedLoans.slice(start, start + itemsPerPage);
+  }, [returnedLoans, currentPage, itemsPerPage]);
 
   const getDaysRemaining = (dueDateStr: string) => {
     const due = new Date(dueDateStr);
@@ -82,25 +103,45 @@ export default function MyLoansView() {
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white">Mis Préstamos</h1>
           <p className="text-slate-400 mt-1">Gestiona tus libros prestados y próximos a vencer</p>
         </div>
-        <div className="relative w-full md:w-80">
-          <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Buscar por libro..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar por libro..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-slate-900/50 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-300 w-full sm:w-auto">
+            <select
+              className="bg-transparent text-white font-extrabold focus:outline-none border-none cursor-pointer w-full"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as any);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="ALL" className="bg-slate-900">TODOS LOS ESTADOS</option>
+              <option value="ACTIVE" className="bg-slate-900">ACTIVOS / VIGENTES</option>
+              <option value="OVERDUE" className="bg-slate-900">VENCIDOS</option>
+              <option value="RETURNED" className="bg-slate-900">DEVUELTOS</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Stats Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-slate-900/50 border border-slate-800 rounded-4xl p-6 flex items-center gap-6 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
             <BookOpenIcon className="w-7 h-7" />
@@ -149,12 +190,19 @@ export default function MyLoansView() {
               const isOverdue = new Date(loan.dueDate).getTime() < new Date().getTime();
               const daysLeft = getDaysRemaining(loan.dueDate);
               const progressPercentage = Math.max(0, Math.min(100, (daysLeft / 14) * 100)); // Assuming 14 days total
-              
+
               const colorClass = isOverdue ? 'text-red-500' : daysLeft <= 3 ? 'text-amber-500' : 'text-emerald-500';
               const ringColor = isOverdue ? 'text-red-500/20' : daysLeft <= 3 ? 'text-amber-500/20' : 'text-emerald-500/20';
 
               return (
-                <div key={loan.loanId} className={`relative bg-slate-900/60 backdrop-blur-md border ${isOverdue ? 'border-red-500/30 shadow-red-900/20' : 'border-slate-800'} rounded-4xl p-6 shadow-xl flex flex-col`}>
+                <div
+                  key={loan.loanId}
+                  onClick={() => {
+                    setSelectedLoan(loan);
+                    setIsDetailOpen(true);
+                  }}
+                  className={`relative bg-slate-900/60 backdrop-blur-md border ${isOverdue ? 'border-red-500/30 shadow-red-900/20' : 'border-slate-800'} rounded-4xl p-6 shadow-xl flex flex-col cursor-pointer hover:border-blue-500/50 hover:shadow-blue-500/5 hover:-translate-y-0.5 transition-all duration-300`}
+                >
                   {isOverdue && (
                     <div className="absolute top-0 right-0 translate-x-2 -translate-y-2">
                       <span className="flex h-4 w-4">
@@ -163,7 +211,7 @@ export default function MyLoansView() {
                       </span>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between items-start mb-6">
                     <div>
                       <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-widest border border-slate-700">
@@ -171,7 +219,7 @@ export default function MyLoansView() {
                       </span>
                       <h3 className="text-lg font-black text-white mt-3 line-clamp-2">{loan.copy?.book?.title}</h3>
                     </div>
-                    
+
                     {/* Progress Ring */}
                     <div className="relative w-16 h-16 shrink-0">
                       <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -209,7 +257,7 @@ export default function MyLoansView() {
                     </div>
                     {/* Horizontal Timeline */}
                     <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`absolute top-0 left-0 h-full ${isOverdue ? 'bg-red-500' : daysLeft <= 3 ? 'bg-amber-500' : 'bg-blue-500'} transition-all duration-1000`}
                         style={{ width: `${isOverdue ? 100 : Math.max(5, Math.min(100, 100 - progressPercentage))}%` }}
                       ></div>
@@ -229,7 +277,7 @@ export default function MyLoansView() {
             <CheckCircleIcon className="w-6 h-6 text-emerald-400" />
             Historial de Devoluciones
           </h2>
-          
+
           <div className="bg-slate-900/50 border border-slate-800 rounded-4xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-300">
@@ -242,10 +290,17 @@ export default function MyLoansView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
-                  {returnedLoans.map(loan => {
+                  {paginatedReturnedLoans.map(loan => {
                     const returnedLate = loan.returnDate && new Date(loan.returnDate).getTime() > new Date(loan.dueDate).getTime();
                     return (
-                      <tr key={loan.loanId} className="hover:bg-slate-800/30 transition-colors">
+                      <tr
+                        key={loan.loanId}
+                        onClick={() => {
+                          setSelectedLoan(loan);
+                          setIsDetailOpen(true);
+                        }}
+                        className="hover:bg-slate-800/30 transition-colors cursor-pointer"
+                      >
                         <td className="px-6 py-4 font-bold text-white">{loan.copy?.book?.title}</td>
                         <td className="px-6 py-4">{new Date(loan.borrowDate).toLocaleDateString()}</td>
                         <td className="px-6 py-4">{loan.returnDate ? new Date(loan.returnDate).toLocaleDateString() : '-'}</td>
@@ -267,8 +322,24 @@ export default function MyLoansView() {
               </table>
             </div>
           </div>
+
+          {/* Pagination for History Table */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
+      {/* Detail Modal */}
+      <LoanDetailModal
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedLoan(null);
+        }}
+        loan={selectedLoan}
+      />
     </div>
   );
 }

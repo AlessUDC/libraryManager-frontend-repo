@@ -34,9 +34,9 @@ export default function AuthorFormView() {
   }, [editingAuthor, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: CreateAuthorDto) => 
-      slug 
-        ? updateAuthor(editingAuthor!.authorId, data) 
+    mutationFn: (data: CreateAuthorDto) =>
+      slug
+        ? updateAuthor(editingAuthor!.authorId, data)
         : createAuthor(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['authors'] });
@@ -70,8 +70,8 @@ export default function AuthorFormView() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4">
-      <button 
+    <div className="max-w-2xl mx-auto p-0 md:py-10">
+      <button
         onClick={() => navigate('/authors')}
         className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 group"
       >
@@ -81,10 +81,10 @@ export default function AuthorFormView() {
 
       <div className="bg-[#0F1523] border border-slate-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-white mb-2">
+          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
             {slug ? 'Editar Autor' : 'Nuevo Autor'}
           </h1>
-          <p className="text-slate-500 text-lg">Gestiona la información del autor</p>
+          <p className="text-slate-500 text-left md:text-lg">Gestiona la información del autor</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">

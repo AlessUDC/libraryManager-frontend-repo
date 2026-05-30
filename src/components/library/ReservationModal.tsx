@@ -26,6 +26,7 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
   const [dueDate, setDueDate] = useState('');
   const [duration, setDuration] = useState(60);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [blockError, setBlockError] = useState<{ title: string; message: string; limitType: 'DAILY' | 'ACTIVE' } | null>(null);
   const [now, setNow] = useState(() => new Date());
   const maxReservationDuration = userRole.toUpperCase() === 'TEACHER' ? 120 : 60;
   const maxLoanDays = 5;
@@ -75,7 +76,20 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
     },
     onError: (error: Error) => {
       const message = isAxiosError(error) ? error.response?.data?.message : error.message;
-      toast.error(message || 'Error al crear la reserva');
+      const strMessage = Array.isArray(message) ? message.join(', ') : String(message || '');
+      
+      if (strMessage.includes('DAILY_LIMIT_EXCEEDED') || strMessage.includes('LOAN_LIMIT_EXCEEDED')) {
+        const isDaily = strMessage.includes('DAILY_LIMIT_EXCEEDED');
+        setBlockError({
+          title: isDaily ? 'Límite de Reserva Diario Excedido' : 'Límite de Préstamos Activos Excedido',
+          message: isDaily 
+            ? `Has alcanzado el límite diario de reservas permitido para tu rol (${userRole.toUpperCase() === 'TEACHER' ? '5' : '2'} por día).`
+            : `Has alcanzado el límite de préstamos activos simultáneos permitido para tu rol (${userRole.toUpperCase() === 'TEACHER' ? '6' : '3'} préstamos).`,
+          limitType: isDaily ? 'DAILY' : 'ACTIVE'
+        });
+      } else {
+        toast.error(strMessage || 'Error al crear la reserva');
+      }
     }
   });
 
@@ -112,6 +126,7 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
     setIsOpen(false);
     setTimeout(() => {
       setShowSuccess(false);
+      setBlockError(null);
     }, 300);
   };
 
@@ -142,7 +157,33 @@ export default function ReservationModal({ isOpen, setIsOpen, copyId, bookTitle,
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-[2.5rem] bg-slate-900 border border-slate-800 p-8 text-left align-middle shadow-2xl transition-all">
-                {!showSuccess ? (
+                {blockError ? (
+                  <div className="text-center py-4">
+                    <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center text-red-500 border border-red-500/20 mx-auto mb-6">
+                      <XMarkIcon className="w-12 h-12" />
+                    </div>
+                    
+                    <h3 className="text-2xl font-black text-white mb-2">{blockError.title}</h3>
+                    <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                      {blockError.message}
+                    </p>
+
+                    <div className="space-y-4">
+                      <div className="bg-red-500/5 border border-red-500/10 p-4 rounded-2xl text-left">
+                        <p className="text-xs text-red-400 font-medium">
+                          Nota: Los límites son establecidos para garantizar una distribución justa y equitativa de los recursos bibliotecarios para todos los miembros.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={handleClose}
+                        className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 border border-slate-700"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                ) : !showSuccess ? (
                   <>
                     <div className="flex justify-between items-start mb-6">
                       <div>

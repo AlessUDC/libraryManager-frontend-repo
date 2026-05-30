@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { createUser, updateUser, getUserBySlug } from '../../api/users';
+import { createUser, updateUser, getUserBySlug, getUserById } from '../../api/users';
 import ErrorMessage from '../../components/ErrorMessage';
 import SuccessAccountModal from '../../components/auth/SuccessAccountModal';
 import {
@@ -72,49 +72,55 @@ export default function UserFormView() {
 
   const { data: user, isLoading: isLoadingUser, isError: isErrorUser } = useQuery({
     queryKey: ['user', slug],
-    queryFn: () => getUserBySlug(slug!),
+    queryFn: () => {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug!);
+      return isUuid ? getUserById(slug!) : getUserBySlug(slug!);
+    },
     enabled: isEdit,
     retry: false
   });
+
+  const isResettingRef = useRef(false);
 
   useEffect(() => {
     getProvinces().then(setProvinces);
     getFaculties().then(setFaculties);
   }, []);
 
+  // Load districts when province changes
   useEffect(() => {
-    if (selectedProvinceId) {
-      getDistricts(selectedProvinceId).then((data) => {
-        setDistricts(data);
-        if (user?.userData?.district?.provinceId === selectedProvinceId) {
-          setValue('districtId', user.userData.districtId || '');
-        }
-      });
-    } else {
+    if (!selectedProvinceId) {
       setDistricts([]);
-      setValue('districtId', '');
+      if (!isResettingRef.current) setValue('districtId', '');
+      return;
     }
-  }, [selectedProvinceId, user, setValue]);
+    getDistricts(selectedProvinceId).then((data) => {
+      setDistricts(data);
+      // After a reset we restore the saved districtId; on manual change we clear it
+      if (!isResettingRef.current) {
+        setValue('districtId', '');
+      }
+    });
+  }, [selectedProvinceId, setValue]);
 
+  // Load schools when faculty changes
   useEffect(() => {
-    if (selectedFacultyId) {
-      getSchools(selectedFacultyId).then((data) => {
-        setSchools(data);
-        if (
-          user?.student?.school?.facultyId === selectedFacultyId ||
-          user?.teacher?.facultyId === selectedFacultyId
-        ) {
-          setValue('schoolId', user?.student?.schoolId || '');
-        }
-      });
-    } else {
+    if (!selectedFacultyId) {
       setSchools([]);
-      setValue('schoolId', '');
+      if (!isResettingRef.current) setValue('schoolId', '');
+      return;
     }
-  }, [selectedFacultyId, user, setValue]);
+    getSchools(selectedFacultyId).then((data) => {
+      setSchools(data);
+      if (!isResettingRef.current) {
+        setValue('schoolId', '');
+      }
+    });
+  }, [selectedFacultyId, setValue]);
 
   useEffect(() => {
     if (user) {
+      isResettingRef.current = true;
       reset({
         ...user.userData,
         code: user.code,
@@ -129,6 +135,10 @@ export default function UserFormView() {
         schoolId: user.student?.schoolId || '',
         cycle: user.student?.cycle || 1,
       });
+      // Allow the cascade effects to fire with isResettingRef=true, then reset it
+      setTimeout(() => {
+        isResettingRef.current = false;
+      }, 200);
     }
   }, [user, reset]);
 
@@ -136,13 +146,13 @@ export default function UserFormView() {
   const [createdUser, setCreatedUser] = useState<{ name: string; code: string; activationToken?: string } | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (data: UserFormValues) => 
-      isEdit 
-        ? updateUser({ id: user?.userId!, formData: data }) 
+    mutationFn: (data: UserFormValues) =>
+      isEdit
+        ? updateUser({ id: user?.userId!, formData: data })
         : createUser(data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      
+
       if (!isEdit) {
         // Store created user info and show modal
         setCreatedUser({
@@ -170,10 +180,10 @@ export default function UserFormView() {
     // Clean up fields that the backend rejects due to forbidNonWhitelisted: true
     const cleanData = { ...data };
     const blacklistedFields = [
-      'userDataId', 
-      'addressId', 
-      'createdAt', 
-      'updatedAt', 
+      'userDataId',
+      'addressId',
+      'createdAt',
+      'updatedAt',
       'district',
       'user',
       'student',
@@ -181,7 +191,7 @@ export default function UserFormView() {
       'librarian',
       'administrator'
     ];
-    
+
     blacklistedFields.forEach(field => {
       // @ts-ignore
       delete cleanData[field];
@@ -236,7 +246,7 @@ export default function UserFormView() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6">
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <UserIcon className="w-6 h-6 text-blue-400" />
             <h2 className="text-xl font-bold text-white">Información Personal</h2>
@@ -329,7 +339,7 @@ export default function UserFormView() {
           </div>
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6">
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <PhoneIcon className="w-6 h-6 text-emerald-400" />
             <h2 className="text-xl font-bold text-white">Ubicación y Contacto</h2>
@@ -376,9 +386,9 @@ export default function UserFormView() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-300">Celular</label>
               <input
-                {...register('mobilePhone', { 
+                {...register('mobilePhone', {
                   required: 'Campo obligatorio',
-                  pattern: { value: /^\d{9}$/, message: '9 dígitos' }
+                  pattern: { value: /^\d{9}$/, message: 'El teléfono móvil debe tener exactamente 9 dígitos' }
                 })}
                 className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 px-4 text-white focus:ring-2 focus:ring-emerald-500/50 outline-hidden transition-all"
               />
@@ -388,9 +398,9 @@ export default function UserFormView() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-300">Teléfono Fijo</label>
               <input
-                {...register('landlinePhone', { 
+                {...register('landlinePhone', {
                   required: 'Campo obligatorio',
-                  pattern: { value: /^\d{9}$/, message: '9 dígitos' }
+                  pattern: { value: /^\d{9}$/, message: 'El teléfono fijo debe tener exactamente 9 dígitos' }
                 })}
                 className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 px-4 text-white focus:ring-2 focus:ring-emerald-500/50 outline-hidden transition-all"
               />
@@ -399,17 +409,20 @@ export default function UserFormView() {
           </div>
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6">
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <BriefcaseIcon className="w-6 h-6 text-indigo-400" />
             <h2 className="text-xl font-bold text-white">Cuenta y Rol</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-300">Código</label>
               <input
-                {...register('code', { required: 'Código obligatorio' })}
+                {...register('code', {
+                  required: 'Código obligatorio',
+                  pattern: { value: /^\d{10}$/, message: 'El código debe tener exactamente 10 dígitos' }
+                })}
                 className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 px-4 text-white focus:ring-2 focus:ring-indigo-500/50 outline-hidden transition-all"
               />
               {errors.code && <ErrorMessage>{errors.code.message}</ErrorMessage>}
@@ -429,7 +442,19 @@ export default function UserFormView() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-300">Número de Documento</label>
               <input
-                {...register('documentNumber', { required: 'DNI/CE obligatorio' })}
+                {...register('documentNumber', {
+                  required: 'DNI/CE obligatorio',
+                  validate: (value) => {
+                    const docType = watch('documentType') || 'DNI';
+                    if (docType === 'DNI') {
+                      return /^\d{8}$/.test(value) || 'El DNI debe tener exactamente 8 dígitos';
+                    }
+                    if (docType === 'CE') {
+                      return /^\d{9}$/.test(value) || 'El CE debe tener exactamente 9 dígitos';
+                    }
+                    return true;
+                  }
+                })}
                 className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 px-4 text-white focus:ring-2 focus:ring-indigo-500/50 outline-hidden transition-all"
               />
               {errors.documentNumber && (
@@ -454,11 +479,10 @@ export default function UserFormView() {
                     onClick={() =>
                       setValue('role', roleOption.id as UserRole, { shouldValidate: true })
                     }
-                    className={`flex-1 min-w-[120px] px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                      selectedRole === roleOption.id
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-                    }`}
+                    className={`flex-1 min-w-[120px] px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${selectedRole === roleOption.id
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                      : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                      }`}
                   >
                     {roleOption.label}
                   </button>
@@ -478,7 +502,7 @@ export default function UserFormView() {
         </div>
 
         {['STUDENT', 'TEACHER'].includes(selectedRole) && (
-          <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6">
+          <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
               <AcademicCapIcon className="w-6 h-6 text-purple-400" />
               <h2 className="text-xl font-bold text-white">Datos Académicos</h2>
@@ -553,7 +577,7 @@ export default function UserFormView() {
         </div>
       </form>
 
-      <SuccessAccountModal 
+      <SuccessAccountModal
         isOpen={showSuccessModal}
         onClose={handleModalClose}
         userData={createdUser}

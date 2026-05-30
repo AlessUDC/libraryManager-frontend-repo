@@ -17,6 +17,7 @@ interface LibraryTableProps<T> {
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
   idExtractor?: (item: T) => string;
+  minWidth?: string;
 }
 
 const LibraryTable = <T extends unknown>({
@@ -28,7 +29,8 @@ const LibraryTable = <T extends unknown>({
   selectable = false,
   selectedIds = [],
   onSelectionChange,
-  idExtractor
+  idExtractor,
+  minWidth = 'min-w-[800px]'
 }: LibraryTableProps<T>) => {
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const allSelected = data.length > 0 && data.every(item => idExtractor && selectedIds.includes(idExtractor(item)));
@@ -53,7 +55,7 @@ const LibraryTable = <T extends unknown>({
       const start = Math.min(lastSelectedIndex, index);
       const end = Math.max(lastSelectedIndex, index);
       const rangeIds = data.slice(start, end + 1).map(item => idExtractor(item));
-      
+
       const isRemoving = selectedIds.includes(id);
       if (isRemoving) {
         newSelectedIds = newSelectedIds.filter(i => !rangeIds.includes(i));
@@ -75,14 +77,14 @@ const LibraryTable = <T extends unknown>({
   return (
     <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden flex flex-col h-full max-h-[600px]">
       <div className="overflow-auto flex-1 custom-scrollbar">
-        <table className="w-full text-left border-collapse min-w-[800px]">
+        <table className={`w-full text-left border-collapse ${minWidth}`}>
           <thead className="sticky top-0 z-20">
             <tr className="bg-slate-900/90 backdrop-blur-md shadow-sm">
               {selectable && (
                 <th className="px-6 py-4 w-12">
                   <div className="flex items-center justify-center">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-5 h-5 rounded-lg border-2 border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500/50 focus:ring-offset-0 transition-all cursor-pointer checked:border-blue-500 hover:border-slate-500 appearance-none checked:bg-[url('data:image/svg+xml;border-radius:4px;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0id2hpdGUiPgogIDxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTE2LjcwNyA1LjI5M2ExIDEgMCAwMTAgMS40MTRsLTggOGExIDEgMCAwMS0xLjQxNCAwbC00LTRhMSAxIDAgMTExLjQxNC0xLjQxNEw4IDEyLjU4NmwtNy4yOTMtNy4yOTNhMSAxIDAgMDExLjQxNCAweiIgY2xpcC1ydWxlPSJldmVub2RkIiAvPgo8L3N2Zz4=')] bg-center bg-no-repeat bg-[length:12px_12px]"
                       checked={allSelected}
                       onChange={handleSelectAll}
@@ -91,15 +93,15 @@ const LibraryTable = <T extends unknown>({
                 </th>
               )}
               {columns.map((col, index) => (
-                <th 
-                  key={index} 
-                  className={`px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider ${col.className || ''}`}
+                <th
+                  key={index}
+                  className={`px-4 py-4 md:px-6 text-xs text-center md:text-left font-bold text-slate-400 uppercase tracking-wider ${col.className || ''}`}
                 >
                   {col.header}
                 </th>
               ))}
               {renderActions && (
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 md:px-6 text-xs text-right font-bold text-slate-400 uppercase tracking-wider">
                   Acciones
                 </th>
               )}
@@ -115,8 +117,8 @@ const LibraryTable = <T extends unknown>({
                   {selectable && (
                     <td className="px-6 py-4 w-12">
                       <div className="flex items-center justify-center">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="w-5 h-5 rounded-lg border-2 border-slate-700 bg-slate-900/50 text-blue-600 focus:ring-blue-500/50 focus:ring-offset-0 transition-all cursor-pointer checked:border-blue-500 hover:border-slate-500 appearance-none checked:bg-[url('data:image/svg+xml;border-radius:4px;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0id2hpdGUiPgogIDxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTE2LjcwNyA1LjI5M2ExIDEgMCAwMTAgMS40MTRsLTggOGExIDEgMCAwMS0xLjQxNCAwbC00LTRhMSAxIDAgMTExLjQxNC0xLjQxNEw4IDEyLjU4NmwtNy4yOTMtNy4yOTNhMSAxIDAgMDExLjQxNCAweiIgY2xpcC1ydWxlPSJldmVub2RkIiAvPgo8L3N2Zz4=')] bg-center bg-no-repeat bg-[length:12px_12px]"
                           checked={isSelected}
                           onChange={(e) => handleSelectOne(id, rowIndex, (e.nativeEvent as MouseEvent).shiftKey)}
@@ -125,7 +127,7 @@ const LibraryTable = <T extends unknown>({
                     </td>
                   )}
                   {columns.map((col, colIndex) => (
-                    <td key={colIndex} className={`px-6 py-4 text-sm text-slate-300 ${col.className || ''}`}>
+                    <td key={colIndex} className={`px-4 py-4 text-centertext-sm text-slate-300 ${col.className || ''}`}>
                       {col.render(item)}
                     </td>
                   ))}
@@ -139,7 +141,7 @@ const LibraryTable = <T extends unknown>({
             })}
           </tbody>
         </table>
-        
+
         {data.length === 0 && (
           <div className="p-20 text-center flex flex-col items-center justify-center">
             {EmptyIcon && <EmptyIcon className="w-16 h-16 text-slate-800 mb-4 opacity-50" />}

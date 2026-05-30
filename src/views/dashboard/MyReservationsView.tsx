@@ -6,10 +6,13 @@ import LibraryTable from '../../components/library/LibraryTable';
 import { toast } from 'react-toastify';
 import { isAxiosError } from 'axios';
 import type { Reservation } from '../../api/reservations';
+import Pagination from '../../components/Pagination';
 
 export default function MyReservationsView() {
   const queryClient = useQueryClient();
   const [now, setNow] = useState(() => new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -17,6 +20,7 @@ export default function MyReservationsView() {
   }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED'>('ALL');
 
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ['my-reservations'],
@@ -137,26 +141,26 @@ export default function MyReservationsView() {
       )
     },
     {
-      header: 'Expira / Entregado',
+      header: 'Expira',
       render: (res: Reservation) => {
-        const effective = getEffectiveStatus(res);
+        const expiresAt = new Date(res.expiresAt);
+        const diff = expiresAt.getTime() - now.getTime();
+
+        if (res.status !== 'PENDING' || diff <= 0) {
+          return (
+            <span className="text-xs text-center font-bold text-red-400">
+              0h 00m
+            </span>
+          );
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
         return (
-          <div className="text-[11px]">
-            {effective === 'PENDING' ? (
-              <>
-                <p className="text-slate-400">Vence:</p>
-                <p className="font-bold text-amber-400">
-                  {new Date(res.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </p>
-              </>
-            ) : effective === 'FULFILLED' ? (
-              <p className="text-emerald-400 font-bold">Entregado</p>
-            ) : effective === 'EXPIRED' ? (
-              <p className="text-amber-400 font-bold">Expirado</p>
-            ) : (
-              <p className="text-slate-600">-</p>
-            )}
-          </div>
+          <span className="text-xs text-center font-semibold text-amber-400">
+            {hours}h {minutes}m
+          </span>
         );
       }
     },
@@ -180,6 +184,21 @@ export default function MyReservationsView() {
     return { pending, fulfilled, expired };
   }, [reservations, now]);
 
+  const filteredReservations = useMemo(() => {
+    return reservations.filter(res => {
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        const matchText = res.copy?.book?.title?.toLowerCase().includes(search) || res.copy?.barcode?.toLowerCase().includes(search);
+        if (!matchText) return false;
+      }
+      if (statusFilter !== 'ALL') {
+        const effective = getEffectiveStatus(res);
+        if (effective !== statusFilter) return false;
+      }
+      return true;
+    });
+  }, [reservations, searchTerm, statusFilter, now]);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -190,23 +209,42 @@ export default function MyReservationsView() {
 
   return (
     <div className="space-y-8 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white">Mis Reservas</h1>
           <p className="text-slate-400 mt-1">Sigue el estado de tus reservas y entregas</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
           <div className="relative w-full sm:w-64">
             <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               placeholder="Buscar por libro..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
             />
           </div>
-          <button 
+          <div className="flex items-center gap-2 bg-slate-900/50 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-300 w-full sm:w-auto">
+            <select
+              className="bg-transparent text-white font-extrabold focus:outline-none border-none cursor-pointer w-full"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as any);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="ALL" className="bg-slate-900">TODOS LOS ESTADOS</option>
+              <option value="PENDING" className="bg-slate-900">PENDIENTES</option>
+              <option value="FULFILLED" className="bg-slate-900">ENTREGADAS</option>
+              <option value="CANCELLED" className="bg-slate-900">CANCELADAS</option>
+              <option value="EXPIRED" className="bg-slate-900">EXPIRADAS</option>
+            </select>
+          </div>
+          <button
             onClick={() => window.location.href = '/explore'}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 whitespace-nowrap"
           >
@@ -254,12 +292,8 @@ export default function MyReservationsView() {
           </p>
         </div>
 
-        <LibraryTable 
-          data={reservations.filter(res => {
-            if (!searchTerm) return true;
-            const search = searchTerm.toLowerCase();
-            return res.copy?.book?.title?.toLowerCase().includes(search) || res.copy?.barcode?.toLowerCase().includes(search);
-          })}
+        <LibraryTable
+          data={filteredReservations.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)}
           columns={columns}
           idExtractor={(res) => res.reservationId}
           emptyMessage="No tienes reservas registradas"
@@ -270,16 +304,16 @@ export default function MyReservationsView() {
             return (
               <div className="flex items-center gap-3 justify-end">
                 <div className="relative w-32">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     maxLength={6}
                     placeholder="Token 6-dig"
                     value={tokens[res.reservationId] || ''}
-                    onChange={(e) => setTokens({...tokens, [res.reservationId]: e.target.value.replace(/\D/g, '')})}
+                    onChange={(e) => setTokens({ ...tokens, [res.reservationId]: e.target.value.replace(/\D/g, '') })}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl py-2 px-3 text-center text-xs font-mono tracking-widest text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
                   />
                 </div>
-                <button 
+                <button
                   onClick={() => handleRedeem(res.reservationId)}
                   disabled={redeemMutation.isPending}
                   className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all shadow-lg shadow-emerald-900/20 active:scale-95 disabled:opacity-50"
@@ -298,6 +332,13 @@ export default function MyReservationsView() {
             );
           }}
         />
+        {filteredReservations.length > ITEMS_PER_PAGE && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredReservations.length / ITEMS_PER_PAGE)}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </div>
   );

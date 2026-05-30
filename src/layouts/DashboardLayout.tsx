@@ -3,9 +3,7 @@ import { getUserProfile } from '../api/auth';
 import UserProfileModal from '../components/UserProfileModal';
 import Sidebar from '../components/Sidebar';
 import ChangeCredentialsModal from '../components/ChangeCredentialsModal';
-import DigitalLibraryCard from '../components/library/DigitalLibraryCard';
 import MenuIcon from '../assets/svg/Menu'
-import { IdentificationIcon } from '@heroicons/react/24/outline';
 import UserIcon from '../assets/svg/User'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, type ReactNode } from 'react';
@@ -24,17 +22,6 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
 
   const isProfileOpen = searchParams.get('view-profile') === 'true';
   const isCredentialsOpen = searchParams.get('edit-profile') === 'true';
-  const isLibraryCardOpen = searchParams.get('library-card') === 'true';
-
-  const setIsLibraryCardOpen = (open: boolean) => {
-    const params = new URLSearchParams(searchParams);
-    if (open) {
-      params.set('library-card', 'true');
-    } else {
-      params.delete('library-card');
-    }
-    setSearchParams(params);
-  };
 
   const setIsProfileOpen = (open: boolean | ((prev: boolean) => boolean)) => {
     const value = typeof open === 'function' ? open(isProfileOpen) : open;
@@ -42,6 +29,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
     if (value) {
       params.set('view-profile', 'true');
       params.delete('edit-profile');
+      setIsSidebarOpen(false);
     } else {
       params.delete('view-profile');
     }
@@ -63,7 +51,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: getUserProfile,
-    enabled: isProfileOpen || isCredentialsOpen || isLibraryCardOpen,
+    enabled: isProfileOpen || isCredentialsOpen,
   });
 
   const handleLogout = () => {
@@ -100,17 +88,12 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
         profile={profile}
       />
 
-      {/* Digital Library Card */}
-      <DigitalLibraryCard
-        isOpen={isLibraryCardOpen}
-        onClose={() => setIsLibraryCardOpen(false)}
-        user={JSON.parse(localStorage.getItem('user') || '{}')}
-        profile={profile}
-      />
+
 
       {/* Sidebar */}
       <Sidebar
         isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
         role={role}
@@ -140,18 +123,17 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
 
         {/* Topbar (Desktop) */}
         <header className="hidden md:flex bg-[#0F1523]/80 backdrop-blur-md border-b border-slate-800 p-6 items-center justify-between sticky top-0 z-10">
-          <div className="flex-1">
+          <div className="flex-1 flex items-center gap-4">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-2 text-slate-400 hover:text-white rounded-xl transition-all active:scale-95 cursor-pointer"
+              title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              <MenuIcon className="w-6 h-6" />
+            </button>
             <h2 className="text-xl font-bold text-white">Panel de Control</h2>
           </div>
           <div className="flex items-center space-x-6">
-            <button
-              onClick={() => setIsLibraryCardOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-all active:scale-95 shadow-sm"
-              title="Carné Digital"
-            >
-              <IdentificationIcon className="w-5 h-5 text-blue-400" />
-              <span className="text-xs font-bold uppercase tracking-wider hidden lg:block">Carné Digital</span>
-            </button>
             <div
               onClick={() => setIsProfileOpen(true)}
               className="flex items-center space-x-3 border-r border-slate-800 pr-6 cursor-pointer group"
@@ -172,7 +154,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#0F1523]">
+        <div className="flex-1 overflow-y-auto p-8 md:p-12 bg-[#0F1523]">
           <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             {children}
           </div>

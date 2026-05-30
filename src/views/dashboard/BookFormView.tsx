@@ -45,9 +45,9 @@ export default function BookFormView() {
   }, [editingBook, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: CreateBookDto) => 
-      slug 
-        ? updateBook(editingBook!.bookId, data) 
+    mutationFn: (data: CreateBookDto) =>
+      slug
+        ? updateBook(editingBook!.bookId, data)
         : createBook(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['books'] });
@@ -85,8 +85,8 @@ export default function BookFormView() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4">
-      <button 
+    <div className="max-w-5xl mx-auto p-4">
+      <button
         onClick={() => navigate('/catalogue')}
         className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 group"
       >
@@ -96,7 +96,7 @@ export default function BookFormView() {
 
       <div className="bg-[#0F1523] border border-slate-800 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
         <div className="mb-10">
-          <h1 className="text-4xl font-black text-white mb-2">
+          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
             {slug ? 'Editar Libro' : 'Nuevo Libro'}
           </h1>
           <p className="text-slate-500 text-lg">Completa la información bibliográfica del ejemplar</p>

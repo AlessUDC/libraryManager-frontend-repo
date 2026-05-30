@@ -69,7 +69,7 @@ export default function BarcodeScanner({ isOpen, onClose, onScan }: BarcodeScann
         )}
 
         <p className="text-center text-slate-500 text-xs mt-6 font-bold uppercase tracking-widest">
-          Apunta la cámara al código de barras del ejemplar o carné
+          Apunta la cámara al código de barras del ejemplar
         </p>
       </div>
     </div>

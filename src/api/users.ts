@@ -58,15 +58,15 @@ export const updateUser = async ({ id, formData }: { id: string, formData: Recor
     }
 };
 
-export const deleteUser = async (id: string) => {
+export const deleteUser = async (id: string, password?: string) => {
     try {
-        const { data } = await api.delete(`/users/${id}`);
+        const { data } = await api.delete(`/users/${id}`, { data: { password } });
         return data;
     } catch (error) {
         throw processError(error);
     }
 };
 
-export const deleteMultipleUsers = async (ids: string[]) => {
-    await Promise.all(ids.map(id => deleteUser(id)));
+export const deleteMultipleUsers = async ({ ids, password }: { ids: string[], password?: string }) => {
+    await Promise.all(ids.map(id => deleteUser(id, password)));
 };

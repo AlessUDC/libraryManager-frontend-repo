@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import LoginView from './views/auth/LoginView';
@@ -21,7 +21,9 @@ import AuthorFormView from './views/dashboard/AuthorFormView';
 import UsersView from './views/dashboard/UsersView';
 import UserFormView from './views/dashboard/UserFormView';
 import LoansView from './views/dashboard/LoansView';
+import QuickReturnView from './views/dashboard/QuickReturnView';
 import NotFoundView from './views/NotFoundView';
+import BannedView from './views/BannedView';
 import AdminStatsView from './views/dashboard/AdminStatsView';
 import StudentDashboard from './views/dashboard/StudentDashboard';
 import TeacherDashboard from './views/dashboard/TeacherDashboard';
@@ -29,8 +31,9 @@ import FinesAndAppealsView from './views/dashboard/FinesAndAppealsView';
 import ManageAppealsView from './views/dashboard/ManageAppealsView';
 import AuditLogsView from './views/dashboard/AuditLogsView';
 import DashboardLayout from './layouts/DashboardLayout';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { parseStoredUser } from './utils/auth';
+import { getUserProfile } from './api/auth';
 
 const queryClient = new QueryClient();
 
@@ -43,13 +46,41 @@ interface DashboardRouteProps {
 const DashboardRoute = ({ children, allowedRoles }: DashboardRouteProps) => {
   const token = localStorage.getItem('token');
   const user = parseStoredUser();
-  
+  const navigate = useNavigate();
+
+  // Fetch live profile to detect deactivated/deleted accounts
+  const { data: profile, isError } = useQuery({
+    queryKey: ['profile-status'],
+    queryFn: getUserProfile,
+    enabled: !!token && token !== 'undefined',
+    retry: false,
+    staleTime: 30_000, // Re-check every 30 seconds max
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/auth/login');
+  };
+
   if (!token || token === 'undefined') {
     return <Navigate to="/auth/login" replace />;
   }
 
+  // If the API call fails with 401/403, the token is invalid or the user is deleted
+  if (isError) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  // If the profile loaded and the account is deactivated → show ban page
+  if (profile && profile.userData?.activeState === false) {
+    return <BannedView onLogout={handleLogout} />;
+  }
+
   const userRole = (user?.role || 'STUDENT').toUpperCase();
-  
+
   if (allowedRoles && !allowedRoles.includes(userRole)) {
     return <Navigate to="/" replace />;
   }
@@ -83,25 +114,26 @@ function App() {
           <Route path="/auth/reset-password" element={<ResetPasswordTokenView />} />
           <Route path="/auth/new-password" element={<NewPasswordView />} />
           <Route path="/auth/activate/:token" element={<ActivateAccountView />} />
-          
+
           {/* Dashboard Routes */}
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/catalogue" element={<DashboardRoute allowedRoles={adminLibrarian}><CatalogueView /></DashboardRoute>} />
           <Route path="/catalogue/create" element={<DashboardRoute allowedRoles={adminLibrarian}><BookFormView /></DashboardRoute>} />
           <Route path="/catalogue/:slug/edit" element={<DashboardRoute allowedRoles={adminLibrarian}><BookFormView /></DashboardRoute>} />
-          
+
           <Route path="/authors" element={<DashboardRoute allowedRoles={adminLibrarian}><AuthorsView /></DashboardRoute>} />
           <Route path="/authors/create" element={<DashboardRoute allowedRoles={adminLibrarian}><AuthorFormView /></DashboardRoute>} />
           <Route path="/authors/:slug/edit" element={<DashboardRoute allowedRoles={adminLibrarian}><AuthorFormView /></DashboardRoute>} />
-          
+
           <Route path="/categories" element={<DashboardRoute allowedRoles={adminLibrarian}><CategoriesView /></DashboardRoute>} />
           <Route path="/catalogue/:slug/ejemplares" element={<DashboardRoute allowedRoles={allRoles}><BookCopiesView /></DashboardRoute>} />
-          
+
           <Route path="/explore" element={<DashboardRoute allowedRoles={allRoles}><ExploreBooksView /></DashboardRoute>} />
           <Route path="/loans" element={<DashboardRoute allowedRoles={allRoles}><MyLoansView /></DashboardRoute>} />
           <Route path="/reservations" element={<DashboardRoute allowedRoles={allRoles}><MyReservationsView /></DashboardRoute>} />
           <Route path="/manage-loans" element={<DashboardRoute allowedRoles={adminLibrarian}><LoansView /></DashboardRoute>} />
-          
+          <Route path="/quick-return" element={<DashboardRoute allowedRoles={adminLibrarian}><QuickReturnView /></DashboardRoute>} />
+
           <Route path="/fines-appeals" element={<DashboardRoute allowedRoles={allRoles}><FinesAndAppealsView /></DashboardRoute>} />
           <Route path="/manage-appeals" element={<DashboardRoute allowedRoles={adminLibrarian}><ManageAppealsView /></DashboardRoute>} />
           <Route path="/audit-logs" element={<DashboardRoute allowedRoles={['ADMINISTRATOR']}><AuditLogsView /></DashboardRoute>} />
@@ -113,7 +145,7 @@ function App() {
           <Route path="*" element={<NotFoundView />} />
         </Routes>
 
-        <ToastContainer 
+        <ToastContainer
           position="top-right"
           autoClose={5000}
           hideProgressBar={false}

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { getUserProfile } from '../../api/auth';
 import { getMyFines } from '../../api/fines';
 import type { Fine } from '../../api/fines';
@@ -16,6 +16,7 @@ export default function FinesAndAppealsView() {
   const userId = getStoredUserId(user);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [fineStatusFilter, setFineStatusFilter] = useState<'ALL' | 'PENDING' | 'PAID' | 'APPLIED' | 'REDEEMED'>('ALL');
 
   // 1. Query dynamic user profile to check blocks in real-time
   const { data: profile } = useQuery({
@@ -31,6 +32,30 @@ export default function FinesAndAppealsView() {
   });
 
   const sanctions: Sanction[] = profile?.sanctions || [];
+
+  const filteredFines = useMemo(() => {
+    return fines.filter((fine: Fine) => {
+      if (fineStatusFilter !== 'ALL' && fineStatusFilter !== 'PENDING' && fineStatusFilter !== 'PAID') return false;
+      if (fineStatusFilter === 'PENDING' && fine.status !== 'PENDING') return false;
+      if (fineStatusFilter === 'PAID' && fine.status !== 'PAID') return false;
+
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return fine.loan?.copy?.book?.title?.toLowerCase().includes(search) || fine.description?.toLowerCase().includes(search);
+    });
+  }, [fines, searchTerm, fineStatusFilter]);
+
+  const filteredSanctions = useMemo(() => {
+    return sanctions.filter((sanction: Sanction) => {
+      if (fineStatusFilter !== 'ALL' && fineStatusFilter !== 'APPLIED' && fineStatusFilter !== 'REDEEMED') return false;
+      if (fineStatusFilter === 'APPLIED' && sanction.status !== 'APPLIED') return false;
+      if (fineStatusFilter === 'REDEEMED' && sanction.status !== 'REDEEMED') return false;
+
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return sanction.loan?.copy?.book?.title?.toLowerCase().includes(search) || sanction.type?.toLowerCase().includes(search);
+    });
+  }, [sanctions, searchTerm, fineStatusFilter]);
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '—';
@@ -61,39 +86,52 @@ export default function FinesAndAppealsView() {
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase">Multas y Sanciones</h1>
+          <h1 className="text-3xl font-black text-white tracking-tight">Multas y Sanciones</h1>
           <p className="text-slate-400 mt-1">
             Consulta tus penalizaciones financieras y sanciones disciplinarias.
           </p>
         </div>
-        <div className="relative w-full md:w-80">
-          <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Buscar por libro o motivo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+          <div className="relative w-full sm:w-64">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar por libro o motivo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-slate-900/50 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-300 w-full sm:w-auto">
+            <select
+              className="bg-transparent text-white font-extrabold focus:outline-none border-none cursor-pointer w-full"
+              value={fineStatusFilter}
+              onChange={(e) => setFineStatusFilter(e.target.value as any)}
+            >
+              <option value="ALL" className="bg-slate-900">TODAS LAS MULTAS/SANCIONES</option>
+              <option value="PENDING" className="bg-slate-900">MULTAS PENDIENTES</option>
+              <option value="PAID" className="bg-slate-900">MULTAS PAGADAS</option>
+              <option value="APPLIED" className="bg-slate-900">SANCIONES APLICADAS</option>
+              <option value="REDEEMED" className="bg-slate-900">SANCIONES REDIMIDAS</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Real-time Block Notifications */}
       {isBlocked && blockType && (
         <div className={`relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all shadow-lg animate-pulse duration-1000 p-6 flex flex-col md:flex-row items-start md:items-center gap-6 z-10
-          ${
-            blockType === 'PREVENTIVE'
-              ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+          ${blockType === 'PREVENTIVE'
+            ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
           }
         `}>
           <div className={`p-4 rounded-2xl flex items-center justify-center border
-            ${
-              blockType === 'PREVENTIVE'
-                ? 'bg-amber-500/15 border-amber-500/30'
-                : 'bg-rose-500/15 border-rose-500/30'
+            ${blockType === 'PREVENTIVE'
+              ? 'bg-amber-500/15 border-amber-500/30'
+              : 'bg-rose-500/15 border-rose-500/30'
             }
           `}>
             <ShieldExclamationIcon className="w-8 h-8" />
@@ -106,38 +144,32 @@ export default function FinesAndAppealsView() {
               {blockType === 'PREVENTIVE'
                 ? 'Tienes libros vencidos pendientes de devolución. Tus privilegios para realizar nuevos préstamos o reservas se suspenden temporalmente hasta que regularices tu situación.'
                 : `Se te ha suspendido temporalmente el derecho de realizar préstamos o reservas hasta el ${formatDate(
-                    profile.loanBlockUntil,
-                  )} debido a reincidencia o acumulación de sanciones graves.`}
+                  profile.loanBlockUntil,
+                )} debido a reincidencia o acumulación de sanciones graves.`}
             </p>
           </div>
         </div>
       )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
-          {/* Fines Panel */}
-          <div className="space-y-6 bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-8">
-            <h2 className="text-xl font-black text-white flex items-center gap-3 uppercase tracking-wider">
-              <BanknotesIcon className="w-6 h-6 text-blue-400" />
-              Tus Multas
-            </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+        {/* Fines Panel */}
+        <div className="space-y-6 bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-8">
+          <h2 className="text-xl font-black text-white flex items-center gap-3  tracking-wider">
+            <BanknotesIcon className="w-6 h-6 text-blue-400" />
+            Tus Multas
+          </h2>
 
-            {isLoadingFines ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              </div>
-            ) : fines.length === 0 ? (
-              <div className="text-center py-12 border border-dashed border-slate-800 rounded-3xl bg-slate-950/20">
-                <p className="text-slate-500 italic font-medium">No tienes multas registradas.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {fines
-                  .filter((fine: Fine) => {
-                    if (!searchTerm) return true;
-                    const search = searchTerm.toLowerCase();
-                    return fine.loan?.copy?.book?.title?.toLowerCase().includes(search) || fine.description?.toLowerCase().includes(search);
-                  })
-                  .map((fine: Fine) => {
+          {isLoadingFines ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : filteredFines.length === 0 ? (
+            <div className="text-center py-12 border border-dashed border-slate-800 rounded-3xl bg-slate-950/20">
+              <p className="text-slate-500 italic font-medium">No tienes multas registradas.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredFines.map((fine: Fine) => {
                   return (
                     <div
                       key={fine.fineId}
@@ -163,10 +195,9 @@ export default function FinesAndAppealsView() {
                             ${fine.amount.toFixed(2)}
                           </span>
                           <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border
-                            ${
-                              fine.status === 'PAID'
-                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                                : fine.status === 'PENDING'
+                            ${fine.status === 'PAID'
+                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                              : fine.status === 'PENDING'
                                 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                                 : 'bg-slate-500/10 border-slate-500/20 text-slate-400'
                             }
@@ -174,42 +205,36 @@ export default function FinesAndAppealsView() {
                             {fine.status === 'PAID'
                               ? 'Pagada'
                               : fine.status === 'PENDING'
-                              ? 'Pendiente'
-                              : 'Anulada'}
+                                ? 'Pendiente'
+                                : 'Anulada'}
                           </span>
                         </div>
                       </div>
                     </div>
                   );
                 })}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          {/* Sanctions Panel */}
-          <div className="space-y-6 bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-8">
-            <h2 className="text-xl font-black text-white flex items-center gap-3 uppercase tracking-wider">
-              <ShieldExclamationIcon className="w-6 h-6 text-rose-400" />
-              Tus Sanciones
-            </h2>
+        {/* Sanctions Panel */}
+        <div className="space-y-6 bg-slate-900/30 border border-slate-800 rounded-[2.5rem] p-8">
+          <h2 className="text-xl font-black text-white flex items-center gap-3  tracking-wider">
+            <ShieldExclamationIcon className="w-6 h-6 text-rose-400" />
+            Tus Sanciones
+          </h2>
 
-            {isLoadingFines ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              </div>
-            ) : sanctions.length === 0 ? (
-              <div className="text-center py-12 border border-dashed border-slate-800 rounded-3xl bg-slate-950/20">
-                <p className="text-slate-500 italic font-medium">No tienes sanciones aplicadas.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {sanctions
-                  .filter((sanction: Sanction) => {
-                    if (!searchTerm) return true;
-                    const search = searchTerm.toLowerCase();
-                    return sanction.loan?.copy?.book?.title?.toLowerCase().includes(search) || sanction.type?.toLowerCase().includes(search);
-                  })
-                  .map((sanction: Sanction) => {
+          {isLoadingFines ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : filteredSanctions.length === 0 ? (
+            <div className="text-center py-12 border border-dashed border-slate-800 rounded-3xl bg-slate-950/20">
+              <p className="text-slate-500 italic font-medium">No tienes sanciones aplicadas.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredSanctions.map((sanction: Sanction) => {
                   return (
                     <div
                       key={sanction.sanctionId}
@@ -225,10 +250,9 @@ export default function FinesAndAppealsView() {
                           </h4>
                           <div className="flex gap-2 mt-2 flex-wrap">
                             <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border
-                              ${
-                                sanction.type === 'MUY_GRAVE'
-                                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                                  : sanction.type === 'GRAVE'
+                              ${sanction.type === 'MUY_GRAVE'
+                                ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                : sanction.type === 'GRAVE'
                                   ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                                   : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                               }
@@ -236,10 +260,9 @@ export default function FinesAndAppealsView() {
                               Tipo: {sanction.type}
                             </span>
                             <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border
-                              ${
-                                sanction.status === 'REDEEMED'
-                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                                  : sanction.status === 'APPLIED'
+                              ${sanction.status === 'REDEEMED'
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                : sanction.status === 'APPLIED'
                                   ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                                   : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                               }
@@ -247,8 +270,8 @@ export default function FinesAndAppealsView() {
                               {sanction.status === 'REDEEMED'
                                 ? 'Redimida / Exenta'
                                 : sanction.status === 'APPLIED'
-                                ? 'Aplicada (Bloqueo)'
-                                : 'Acumulable / Pendiente'}
+                                  ? 'Aplicada (Bloqueo)'
+                                  : 'Acumulable / Pendiente'}
                             </span>
                           </div>
                           <p className="text-slate-500 text-[10px] mt-3">
@@ -259,10 +282,10 @@ export default function FinesAndAppealsView() {
                     </div>
                   );
                 })}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+      </div>
     </div>
   );
 }

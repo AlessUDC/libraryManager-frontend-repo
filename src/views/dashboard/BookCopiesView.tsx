@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getBookById, getCopiesByBook, deleteCopy, deleteMultipleCopies } from '../../api/books';
-import { PlusIcon, TrashIcon, MapPinIcon, ArrowLeftIcon, PencilSquareIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, MapPinIcon, ArrowLeftIcon, PencilSquareIcon, QrCodeIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import LibraryTable from '../../components/library/LibraryTable';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useState, useMemo } from 'react';
@@ -78,7 +78,20 @@ export default function BookCopiesView() {
   const isManagement = ['administrador', 'bibliotecario', 'administrator', 'librarian', 'admin'].includes(role);
   const isUser = ['estudiante', 'docente', 'student', 'teacher'].includes(role);
 
+  const BLOCKED_STATUSES: CopyStatus[] = ['LENT', 'RESERVED', 'HELD'];
+  const isCopyBlocked = (copy: Copy) => BLOCKED_STATUSES.includes(copy.status);
+
+  const BLOCKED_LABELS: Partial<Record<CopyStatus, string>> = {
+    LENT: 'Actualmente prestado',
+    RESERVED: 'Tiene una reserva activa',
+    HELD: 'En espera de entrega',
+  };
+
   const handleEdit = (copy: Copy) => {
+    if (isCopyBlocked(copy)) {
+      toast.error(`No se puede editar el ejemplar "${copy.barcode}": ${BLOCKED_LABELS[copy.status]}.`);
+      return;
+    }
     setEditingCopy(copy);
     setIsModalOpen(true);
   };
@@ -88,8 +101,12 @@ export default function BookCopiesView() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (id: string) => {
-    setDeletingId(id);
+  const handleDeleteClick = (copy: Copy) => {
+    if (isCopyBlocked(copy)) {
+      toast.error(`No se puede eliminar el ejemplar "${copy.barcode}": ${BLOCKED_LABELS[copy.status]}.`);
+      return;
+    }
+    setDeletingId(copy.copyId);
     setIsConfirmOpen(true);
   };
 
@@ -162,7 +179,7 @@ export default function BookCopiesView() {
   return (
     <div className="space-y-8">
       {book && (
-        <CopyModal 
+        <CopyModal
           isOpen={isModalOpen}
           setIsOpen={setIsModalOpen}
           bookId={book.bookId}
@@ -172,7 +189,7 @@ export default function BookCopiesView() {
       )}
 
       {selectedResCopyId && book && (
-        <ReservationModal 
+        <ReservationModal
           isOpen={isResModalOpen}
           setIsOpen={setIsResModalOpen}
           copyId={selectedResCopyId}
@@ -181,7 +198,7 @@ export default function BookCopiesView() {
         />
       )}
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isConfirmOpen}
         setIsOpen={setIsConfirmOpen}
         title="¿Eliminar Ejemplar?"
@@ -190,7 +207,7 @@ export default function BookCopiesView() {
         isLoading={deleteMutation.isPending}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isBulkConfirmOpen}
         setIsOpen={setIsBulkConfirmOpen}
         title="¿Eliminar Ejemplares Seleccionados?"
@@ -201,7 +218,7 @@ export default function BookCopiesView() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => navigate('/catalogue')}
             className="p-2 hover:bg-slate-800 rounded-xl transition-all text-slate-400 hover:text-white"
           >
@@ -214,7 +231,7 @@ export default function BookCopiesView() {
         </div>
 
         <div className="flex items-center gap-4">
-          <BulkActionsBar 
+          <BulkActionsBar
             selectedCount={selectedIds.length}
             onDelete={() => setIsBulkConfirmOpen(true)}
             onClearSelection={() => setSelectedIds([])}
@@ -234,50 +251,74 @@ export default function BookCopiesView() {
       </div>
 
       <div className="space-y-6">
-      <LibraryTable
-        data={paginatedCopies}
-        columns={columns}
-        emptyMessage="No hay ejemplares registrados para este libro"
-        emptyIcon={QrCodeIcon}
-        selectable={isManagement}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        idExtractor={(copy) => copy.copyId}
-        renderActions={(copy) => isManagement ? (
-          <div className="flex justify-end gap-2">
-            <button 
-              className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
-              title="Editar"
-              onClick={() => handleEdit(copy)}
-            >
-              <PencilSquareIcon className="w-5 h-5" />
-            </button>
-            <button 
-              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
-              title="Eliminar"
-              onClick={() => handleDeleteClick(copy.copyId)}
-            >
-              <TrashIcon className="w-5 h-5" />
-            </button>
-          </div>
-        ) : isUser ? (
-          <div className="flex justify-end">
-            {copy.status === 'AVAILABLE' && (
-              <button
-                onClick={() => {
-                  setSelectedResCopyId(copy.copyId);
-                  setIsResModalOpen(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
-              >
-                Reservar
-              </button>
-            )}
-          </div>
-        ) : null}
-      />
+        <LibraryTable
+          data={paginatedCopies}
+          columns={columns}
+          emptyMessage="No hay ejemplares registrados para este libro"
+          emptyIcon={QrCodeIcon}
+          selectable={isManagement}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          idExtractor={(copy) => copy.copyId}
+          renderActions={(copy) => isManagement ? (
+            <div className="flex justify-end gap-2">
+              {/* Edit button */}
+              {isCopyBlocked(copy) ? (
+                <div className="relative group/edit">
+                  <button disabled className="p-2 text-slate-600 cursor-not-allowed rounded-lg">
+                    <NoSymbolIcon className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-950 text-amber-400 text-[10px] font-bold rounded-lg opacity-0 group-hover/edit:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-amber-500/20 shadow-xl transition-all">
+                    {BLOCKED_LABELS[copy.status]}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
+                  title="Editar"
+                  onClick={() => handleEdit(copy)}
+                >
+                  <PencilSquareIcon className="w-5 h-5" />
+                </button>
+              )}
+              {/* Delete button */}
+              {isCopyBlocked(copy) ? (
+                <div className="relative group/del">
+                  <button disabled className="p-2 text-slate-600 cursor-not-allowed rounded-lg">
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-950 text-amber-400 text-[10px] font-bold rounded-lg opacity-0 group-hover/del:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-amber-500/20 shadow-xl transition-all">
+                    {BLOCKED_LABELS[copy.status]}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                  title="Eliminar"
+                  onClick={() => handleDeleteClick(copy)}
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          ) : isUser ? (
+            <div className="flex justify-end">
+              {copy.status === 'AVAILABLE' && (
+                <button
+                  onClick={() => {
+                    setSelectedResCopyId(copy.copyId);
+                    setIsResModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                >
+                  Reservar
+                </button>
+              )}
+            </div>
+          ) : null}
+        />
 
-        <Pagination 
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}

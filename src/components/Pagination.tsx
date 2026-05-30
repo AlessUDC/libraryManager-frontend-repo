@@ -12,7 +12,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
   const renderPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
@@ -27,8 +27,8 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
           onClick={() => onPageChange(i)}
           className={`
             w-10 h-10 rounded-xl font-black text-sm transition-all duration-200
-            ${currentPage === i 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40 scale-110 z-10' 
+            ${currentPage === i
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40 scale-110 z-10'
               : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/50'}
           `}
         >
@@ -40,7 +40,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-10 pb-6">
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 $mt-10 $pb-6">
       <div className="flex items-center gap-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}

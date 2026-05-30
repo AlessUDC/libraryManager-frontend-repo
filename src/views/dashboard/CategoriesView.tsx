@@ -88,8 +88,8 @@ export default function CategoriesView() {
 
   const filteredCategories = useMemo(() => {
     if (!categories) return [];
-    return categories.filter(cat => 
-      cat.activeState && 
+    return categories.filter(cat =>
+      cat.activeState &&
       cat.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [categories, searchTerm]);
@@ -127,13 +127,13 @@ export default function CategoriesView() {
 
   return (
     <div className="space-y-8">
-      <CategoryModal 
+      <CategoryModal
         isOpen={isModalOpen}
         setIsOpen={setIsModalOpen}
         editingCategory={editingCategory}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isConfirmOpen}
         setIsOpen={setIsConfirmOpen}
         title="¿Eliminar Categoría?"
@@ -142,7 +142,7 @@ export default function CategoriesView() {
         isLoading={deleteMutation.isPending}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isBulkConfirmOpen}
         setIsOpen={setIsBulkConfirmOpen}
         title="¿Eliminar Categorías Seleccionadas?"
@@ -157,8 +157,8 @@ export default function CategoriesView() {
           <p className="text-slate-400 mt-1">Organiza los libros por temas y géneros</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <BulkActionsBar 
+        <div className="flex-col md:flex-row space-y-4 items-center gap-4">
+          <BulkActionsBar
             selectedCount={selectedIds.length}
             onDelete={() => setIsBulkConfirmOpen(true)}
             onClearSelection={() => setSelectedIds([])}
@@ -178,8 +178,8 @@ export default function CategoriesView() {
       </div>
 
       <div className="space-y-6">
-        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
-          <div className="relative max-w-md">
+        <div className="w-fit bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl">
+          <div className="relative w-fit max-w-md">
             <TagIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
@@ -204,17 +204,18 @@ export default function CategoriesView() {
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
             idExtractor={(cat) => cat.categoryId}
+            minWidth="min-w-0"
             renderActions={(category) => (
               <div className="flex justify-end gap-2">
-                <button 
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all" 
+                <button
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
                   title="Editar"
                   onClick={() => handleEdit(category)}
                 >
                   <PencilSquareIcon className="w-5 h-5" />
                 </button>
-                <button 
-                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
+                <button
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                   title="Eliminar"
                   onClick={() => handleDeleteClick(category.categoryId)}
                 >
@@ -224,7 +225,7 @@ export default function CategoriesView() {
             )}
           />
 
-          <Pagination 
+          <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}

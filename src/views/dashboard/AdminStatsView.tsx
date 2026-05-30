@@ -143,7 +143,7 @@ export default function AdminStatsView() {
                 <BarChart data={stats.distribution.slice(0, 7)} margin={{ top: 20, right: 30, left: -20, bottom: 5 }}>
                   <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{ fill: '#1e293b', opacity: 0.4 }}
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '1rem', color: '#f8fafc' }}
                     itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
@@ -157,7 +157,7 @@ export default function AdminStatsView() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-               <div className="h-full flex items-center justify-center text-slate-500 font-medium">Sin datos suficientes</div>
+              <div className="h-full flex items-center justify-center text-slate-500 font-medium">Sin datos suficientes</div>
             )}
           </div>
         </div>

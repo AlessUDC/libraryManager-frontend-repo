@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBooks, deleteBook, deleteMultipleBooks } from '../../api/books';
 import ErrorMessage from '../../components/ErrorMessage';
 import { useState, useMemo } from 'react';
-import { MagnifyingGlassIcon, PlusIcon, BookOpenIcon, PencilSquareIcon, TrashIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, BookOpenIcon, PencilSquareIcon, TrashIcon, QrCodeIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
 import ConfirmModal from '../../components/ConfirmModal';
 import LibraryTable from '../../components/library/LibraryTable';
 import { Link, useNavigate } from 'react-router-dom';
@@ -63,8 +63,13 @@ export default function CatalogueView() {
     navigate('/catalogue/create');
   };
 
-  const handleDeleteClick = (id: string) => {
-    setDeletingId(id);
+  const handleDeleteClick = (book: Book) => {
+    const loanedCopies = (book.totalCopies || 0) - (book.availableCopies || 0);
+    if (loanedCopies > 0) {
+      toast.error(`No se puede eliminar "${book.title}": tiene ${loanedCopies} ejemplar(es) en uso (prestado/reservado).`);
+      return;
+    }
+    setDeletingId(book.bookId);
     setIsConfirmOpen(true);
   };
 
@@ -85,7 +90,7 @@ export default function CatalogueView() {
 
   const filteredBooks = useMemo(() => {
     if (!books) return [];
-    return books.filter(book => 
+    return books.filter(book =>
       book.activeState && (
         book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         book.publisher?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -118,7 +123,7 @@ export default function CatalogueView() {
             <BookOpenIcon className="w-5 h-5" />
           </div>
           <div className="max-w-xs">
-            <Link 
+            <Link
               to={`/catalogue/${book.slug}/ejemplares`}
               className="text-sm font-bold text-white hover:text-blue-400 transition-colors line-clamp-1"
             >
@@ -175,7 +180,7 @@ export default function CatalogueView() {
 
   return (
     <div className="space-y-8">
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isConfirmOpen}
         setIsOpen={setIsConfirmOpen}
         title="¿Eliminar Libro?"
@@ -184,7 +189,7 @@ export default function CatalogueView() {
         isLoading={deleteMutation.isPending}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isBulkConfirmOpen}
         setIsOpen={setIsBulkConfirmOpen}
         title="¿Eliminar Libros Seleccionados?"
@@ -200,7 +205,7 @@ export default function CatalogueView() {
         </div>
 
         <div className="flex items-center gap-4">
-          <BulkActionsBar 
+          <BulkActionsBar
             selectedCount={selectedIds.length}
             onDelete={() => setIsBulkConfirmOpen(true)}
             onClearSelection={() => setSelectedIds([])}
@@ -247,37 +252,55 @@ export default function CatalogueView() {
             onSelectionChange={setSelectedIds}
             idExtractor={(book) => book.bookId}
             renderActions={(book) => (
-              <div className="flex justify-end gap-2">
-                <Link 
+              <div className="flex justify-center gap-2">
+                <Link
                   to={`/catalogue/${book.slug}/ejemplares`}
-                  className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
+                  className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
                   title="Gestionar Ejemplares"
                 >
                   <QrCodeIcon className="w-5 h-5" />
                 </Link>
                 {isAdmin && (
                   <>
-                    <button 
-                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" 
+                    <button
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
                       title="Editar"
                       onClick={() => handleEdit(book.slug || book.bookId)}
                     >
                       <PencilSquareIcon className="w-5 h-5" />
                     </button>
-                    <button 
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
-                      title="Eliminar"
-                      onClick={() => handleDeleteClick(book.bookId)}
-                    >
-                      <TrashIcon className="w-5 h-5" />
-                    </button>
+                    {(() => {
+                      const loaned = (book.totalCopies || 0) - (book.availableCopies || 0);
+                      return loaned > 0 ? (
+                        <div className="relative group/del">
+                          <button
+                            disabled
+                            className="p-2 text-slate-600 cursor-not-allowed rounded-lg"
+                            aria-label="No se puede eliminar: hay ejemplares prestados"
+                          >
+                            <NoSymbolIcon className="w-5 h-5" />
+                          </button>
+                          <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-slate-950 text-amber-400 text-[10px] font-bold rounded-lg opacity-0 group-hover/del:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-amber-500/20 shadow-xl transition-all">
+                            {loaned} ejemplar(es) prestado(s)
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                          title="Eliminar"
+                          onClick={() => handleDeleteClick(book)}
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      );
+                    })()}
                   </>
                 )}
               </div>
             )}
           />
 
-          <Pagination 
+          <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}

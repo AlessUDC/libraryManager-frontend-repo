@@ -37,3 +37,8 @@ export const getLoans = async (): Promise<Loan[]> => {
   const { data } = await axios.get('/loans');
   return data;
 };
+
+export const getActiveLoanByBarcode = async (barcode: string): Promise<Loan> => {
+  const { data } = await axios.get(`/loans/by-barcode/${encodeURIComponent(barcode)}`);
+  return data;
+};
