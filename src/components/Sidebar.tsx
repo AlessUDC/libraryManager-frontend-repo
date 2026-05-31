@@ -5,7 +5,7 @@ import BookIcon from '../assets/svg/SidebarBook';
 import ClipboardIcon from '../assets/svg/SidebarClipboard';
 import LogoutIcon from '../assets/svg/Logout';
 
-import { UserGroupIcon, TagIcon, MagnifyingGlassIcon, TicketIcon, BanknotesIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, TagIcon, MagnifyingGlassIcon, TicketIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 
 type SidebarProps = {
   isSidebarOpen: boolean;
